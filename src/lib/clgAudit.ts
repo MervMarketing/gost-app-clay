@@ -1,4 +1,91 @@
-import { CLGAuditInput, CLGAuditIssue, CLGAuditResult, CLGRecommendation } from '@/types/gost';
+import {
+  CLGAuditInput,
+  CLGAuditIssue,
+  CLGAuditResult,
+  CLGRecommendation,
+  CLGSalesModel,
+} from '@/types/gost';
+
+/** Infer a display name from the homepage hostname (e.g. fotofetch.com → Fotofetch). */
+export function inferCompanyNameFromUrl(homepageUrl: string): string {
+  try {
+    const normalized = homepageUrl.includes('://') ? homepageUrl : `https://${homepageUrl}`;
+    const host = new URL(normalized).hostname.replace(/^www\./, '');
+    const first = host.split('.')[0] || '';
+    if (!first) return '';
+    return first.charAt(0).toUpperCase() + first.slice(1);
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Baseline scorecard for a one-click audit. Real homepage scraping is not wired yet;
+ * this applies conservative defaults so recommendations still populate. Users can expand
+ * “Refine homepage signals” to override any field.
+ */
+export function buildDraftAuditInput(partial: {
+  companyName?: string;
+  homepageUrl: string;
+  stage?: CLGAuditInput['stage'];
+  companyType?: CLGAuditInput['companyType'];
+  salesModel?: CLGSalesModel;
+}): CLGAuditInput {
+  const rawUrl = partial.homepageUrl.trim();
+  const homepageUrl = rawUrl
+    ? rawUrl.includes('://')
+      ? rawUrl
+      : `https://${rawUrl}`
+    : '';
+
+  let companyName = partial.companyName?.trim() ?? '';
+  if (!companyName && homepageUrl) {
+    companyName = inferCompanyNameFromUrl(homepageUrl);
+  }
+
+  const stage = partial.stage ?? 'growth';
+  const companyType = partial.companyType ?? 'services';
+  const salesModel = partial.salesModel ?? 'complex-b2b';
+
+  let whatIsIt = 5;
+  let whoIsItFor = 5;
+  let whyBetter = 5;
+  let sectionsPresent = ['hero', 'trust', 'differentiation'];
+
+  if (stage === 'pre-seed' || stage === 'early-growth') {
+    whatIsIt = 4;
+    whoIsItFor = 4;
+    whyBetter = 4;
+  }
+  if (stage === 'mature') {
+    whatIsIt = 6;
+    whoIsItFor = 6;
+    whyBetter = 6;
+    sectionsPresent = ['hero', 'trust', 'differentiation', 'demo', 'doors', 'closingCta'];
+  }
+
+  return {
+    companyName,
+    homepageUrl,
+    stage,
+    companyType,
+    salesModel,
+    whatIsIt,
+    whoIsItFor,
+    whyBetter,
+    founderPhrases: [],
+    sectionsPresent,
+    conversionSignals: {
+      ctaSpecific: false,
+      socialProofCredible: true,
+      outcomesFocused: false,
+      customerLanguage: false,
+    },
+    notes:
+      'Baseline draft from quick audit. Expand “Refine homepage signals” to tune scores, sections, or paste quotes.',
+    quoteEvidence: ['', '', ''],
+  };
+}
 
 const FOUNDER_PHRASE_PENALTY = 2;
 

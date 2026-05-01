@@ -1,13 +1,18 @@
 import { useMemo, useState } from 'react';
 import { CLGAuditInput, CLGAuditResult, CLGRecommendation, GOSTData } from '@/types/gost';
-import { runCLGAudit } from '@/lib/clgAudit';
+import { buildDraftAuditInput, runCLGAudit } from '@/lib/clgAudit';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const FOUNDER_PHRASES = [
   'End-to-end platform',
@@ -77,6 +82,10 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   const [deliveryMode, setDeliveryMode] = useState<'diy' | 'dwy' | 'dfy'>('diy');
   const [planSize, setPlanSize] = useState<'small' | 'standard' | 'full'>('small');
   const [unlockedTier, setUnlockedTier] = useState<1 | 2 | 3>(1);
+  const [contextOpen, setContextOpen] = useState(false);
+  const [refineOpen, setRefineOpen] = useState(false);
+  /** When false, Run applies an auto baseline; when true, Run keeps your checklist & scores. */
+  const [manualSignals, setManualSignals] = useState(false);
 
   const visibleRecommendations = useMemo(() => {
     if (!result) return [];
@@ -91,85 +100,133 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   const toggleListValue = (list: string[], value: string): string[] =>
     list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 
+  const runAudit = () => {
+    const url = form.homepageUrl.trim();
+    if (!url) {
+      toast.error('Add a homepage URL to run the audit.');
+      return;
+    }
+
+    const draftShell = buildDraftAuditInput({
+      companyName: form.companyName,
+      homepageUrl: url,
+      stage: form.stage,
+      companyType: form.companyType,
+      salesModel: form.salesModel,
+    });
+
+    const input: CLGAuditInput = manualSignals
+      ? {
+          ...form,
+          companyName: draftShell.companyName,
+          homepageUrl: draftShell.homepageUrl,
+          stage: draftShell.stage,
+          companyType: draftShell.companyType,
+          salesModel: draftShell.salesModel,
+        }
+      : draftShell;
+
+    setForm(input);
+    const next = runCLGAudit(input);
+    setResult(next);
+    onSaveAudit(next);
+  };
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="font-display text-xl">CLG Homepage Audit</CardTitle>
           <CardDescription className="leading-relaxed">
-            Start here: run the audit, then add recommendations to your repository and promote them into goal, objectives, strategies, and tactics.
+            Add your homepage URL and run the audit — we apply a baseline scorecard automatically (no manual form required).
+            Live page scraping is not wired yet; expand “Refine homepage signals” if you have real quotes or a manual pass.
+            Then add recommendations to your repository and promote them into the GOST pyramid.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-3">
             <div className="space-y-2">
-              <Label>Company</Label>
+              <Label htmlFor="clg-homepage-url">Homepage URL</Label>
               <Input
-                value={form.companyName}
-                onChange={(e) => setForm((prev) => ({ ...prev, companyName: e.target.value }))}
-                placeholder="Stoneforge"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Homepage URL</Label>
-              <Input
+                id="clg-homepage-url"
                 value={form.homepageUrl}
                 onChange={(e) => setForm((prev) => ({ ...prev, homepageUrl: e.target.value }))}
-                placeholder="https://example.com"
+                placeholder="fotofetch.com or https://example.com"
+                className="text-base sm:text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="clg-company">Company (optional)</Label>
+              <Input
+                id="clg-company"
+                value={form.companyName}
+                onChange={(e) => setForm((prev) => ({ ...prev, companyName: e.target.value }))}
+                placeholder="We infer from the domain if you leave this blank"
               />
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label>Stage</Label>
-              <select
-                className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
-                value={form.stage}
-                onChange={(e) => setForm((prev) => ({ ...prev, stage: e.target.value as CLGAuditInput['stage'] }))}
-              >
-                <option value="pre-seed">Pre-seed</option>
-                <option value="early-growth">Early growth</option>
-                <option value="growth">Growth</option>
-                <option value="mature">Mature</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>Company type</Label>
-              <select
-                className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
-                value={form.companyType}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, companyType: e.target.value as CLGAuditInput['companyType'] }))
-                }
-              >
-                <option value="services">Services</option>
-                <option value="saas">SaaS</option>
-                <option value="ecommerce">Ecommerce</option>
-                <option value="marketplace">Marketplace</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>Sales model</Label>
-              <select
-                className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
-                value={form.salesModel}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, salesModel: e.target.value as CLGAuditInput['salesModel'] }))
-                }
-              >
-                <option value="complex-b2b">Complex B2B</option>
-                <option value="transactional">Transactional</option>
-                <option value="product-led">Product-led</option>
-                <option value="hybrid">Hybrid</option>
-              </select>
-            </div>
-          </div>
+          <Collapsible open={contextOpen} onOpenChange={setContextOpen}>
+            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border/80 bg-muted/20 px-4 py-3 text-left text-sm font-medium text-foreground hover:bg-muted/40">
+              Company context (optional)
+              <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', contextOpen && 'rotate-180')} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label>Stage</Label>
+                  <select
+                    className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
+                    value={form.stage}
+                    onChange={(e) => setForm((prev) => ({ ...prev, stage: e.target.value as CLGAuditInput['stage'] }))}
+                  >
+                    <option value="pre-seed">Pre-seed</option>
+                    <option value="early-growth">Early growth</option>
+                    <option value="growth">Growth</option>
+                    <option value="mature">Mature</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Company type</Label>
+                  <select
+                    className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
+                    value={form.companyType}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, companyType: e.target.value as CLGAuditInput['companyType'] }))
+                    }
+                  >
+                    <option value="services">Services</option>
+                    <option value="saas">SaaS</option>
+                    <option value="ecommerce">Ecommerce</option>
+                    <option value="marketplace">Marketplace</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Sales model</Label>
+                  <select
+                    className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
+                    value={form.salesModel}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, salesModel: e.target.value as CLGAuditInput['salesModel'] }))
+                    }
+                  >
+                    <option value="complex-b2b">Complex B2B</option>
+                    <option value="transactional">Transactional</option>
+                    <option value="product-led">Product-led</option>
+                    <option value="hybrid">Hybrid</option>
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                These tune which recommendations appear (e.g. PLG vs complex B2B). Defaults work if you skip this.
+              </p>
+            </CollapsibleContent>
+          </Collapsible>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Delivery model</Label>
+              <Label>Delivery model (filters list)</Label>
               <select
                 className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
                 value={deliveryMode}
@@ -181,7 +238,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
               </select>
             </div>
             <div className="space-y-2">
-              <Label>Plan size</Label>
+              <Label>Plan size (tier cap)</Label>
               <select
                 className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
                 value={planSize}
@@ -198,138 +255,156 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
             </div>
           </div>
 
-          <div className="space-y-3">
-            <Label>Clarity scoring (0-10 each)</Label>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Input
-                type="number"
-                min={0}
-                max={10}
-                value={form.whatIsIt}
-                onChange={(e) => setForm((prev) => ({ ...prev, whatIsIt: Number(e.target.value) || 0 }))}
-                placeholder="What is it?"
-              />
-              <Input
-                type="number"
-                min={0}
-                max={10}
-                value={form.whoIsItFor}
-                onChange={(e) => setForm((prev) => ({ ...prev, whoIsItFor: Number(e.target.value) || 0 }))}
-                placeholder="Who is it for?"
-              />
-              <Input
-                type="number"
-                min={0}
-                max={10}
-                value={form.whyBetter}
-                onChange={(e) => setForm((prev) => ({ ...prev, whyBetter: Number(e.target.value) || 0 }))}
-                placeholder="Why better?"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Founder phrases ({phraseSummary})</Label>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {FOUNDER_PHRASES.map((phrase) => (
-                <label key={phrase} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
-                  <Checkbox
-                    checked={form.founderPhrases.includes(phrase)}
-                    onCheckedChange={() =>
-                      setForm((prev) => ({ ...prev, founderPhrases: toggleListValue(prev.founderPhrases, phrase) }))
-                    }
-                  />
-                  <span className="text-xs text-muted-foreground">{phrase}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Essential sections present</Label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {ESSENTIAL_SECTIONS.map((section) => (
-                <label key={section.id} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
-                  <Checkbox
-                    checked={form.sectionsPresent.includes(section.id)}
-                    onCheckedChange={() =>
-                      setForm((prev) => ({ ...prev, sectionsPresent: toggleListValue(prev.sectionsPresent, section.id) }))
-                    }
-                  />
-                  <span className="text-xs text-muted-foreground">{section.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Conversion signals</Label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {[
-                { key: 'ctaSpecific', label: 'Specific outcome CTA' },
-                { key: 'socialProofCredible', label: 'Credible social proof' },
-                { key: 'outcomesFocused', label: 'Outcome-led copy' },
-                { key: 'customerLanguage', label: 'Customer language over buzzwords' },
-              ].map((signal) => (
-                <label key={signal.key} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
-                  <Checkbox
-                    checked={form.conversionSignals[signal.key as keyof CLGAuditInput['conversionSignals']]}
-                    onCheckedChange={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        conversionSignals: {
-                          ...prev.conversionSignals,
-                          [signal.key]: !prev.conversionSignals[signal.key as keyof CLGAuditInput['conversionSignals']],
-                        },
-                      }))
-                    }
-                  />
-                  <span className="text-xs text-muted-foreground">{signal.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Audit notes</Label>
-            <Textarea
-              value={form.notes}
-              onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-              placeholder="Key quotes, missing anchors, strongest weakness..."
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Top quote evidence (optional, 3 snippets)</Label>
-            <div className="space-y-2">
-              {[0, 1, 2].map((idx) => (
-                <Input
-                  key={idx}
-                  value={form.quoteEvidence?.[idx] ?? ''}
-                  onChange={(e) =>
-                    setForm((prev) => {
-                      const next = [...(prev.quoteEvidence ?? ['', '', ''])];
-                      next[idx] = e.target.value;
-                      return { ...prev, quoteEvidence: next };
-                    })
-                  }
-                  placeholder={`Quote ${idx + 1}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          <Button
-            onClick={() => {
-              const next = runCLGAudit(form);
-              setResult(next);
-              onSaveAudit(next);
-            }}
-            className="w-full"
-          >
+          <Button onClick={runAudit} className="w-full" size="lg">
             Run CLG Audit
           </Button>
+
+          <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
+            <Switch id="clg-manual-signals" checked={manualSignals} onCheckedChange={setManualSignals} />
+            <Label htmlFor="clg-manual-signals" className="cursor-pointer text-sm font-normal leading-snug">
+              Use my manual scores & checklists (expand refine below, then enable this before re-running)
+            </Label>
+          </div>
+
+          <Collapsible open={refineOpen} onOpenChange={setRefineOpen}>
+            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border/80 bg-muted/20 px-4 py-3 text-left text-sm font-medium text-foreground hover:bg-muted/40">
+              Refine homepage signals
+              <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', refineOpen && 'rotate-180')} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-5 border-t border-border/60 pt-5 mt-2">
+              <p className="text-xs text-muted-foreground">
+                Optional: paste real homepage quotes or adjust scores after a human read. Turn on the switch above so the
+                next run keeps these fields instead of resetting the baseline.
+              </p>
+
+              <div className="space-y-3">
+                <Label>Clarity scoring (0-10 each)</Label>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={10}
+                    value={form.whatIsIt}
+                    onChange={(e) => setForm((prev) => ({ ...prev, whatIsIt: Number(e.target.value) || 0 }))}
+                    placeholder="What is it?"
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    max={10}
+                    value={form.whoIsItFor}
+                    onChange={(e) => setForm((prev) => ({ ...prev, whoIsItFor: Number(e.target.value) || 0 }))}
+                    placeholder="Who is it for?"
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    max={10}
+                    value={form.whyBetter}
+                    onChange={(e) => setForm((prev) => ({ ...prev, whyBetter: Number(e.target.value) || 0 }))}
+                    placeholder="Why better?"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Founder phrases ({phraseSummary})</Label>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {FOUNDER_PHRASES.map((phrase) => (
+                    <label key={phrase} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
+                      <Checkbox
+                        checked={form.founderPhrases.includes(phrase)}
+                        onCheckedChange={() =>
+                          setForm((prev) => ({ ...prev, founderPhrases: toggleListValue(prev.founderPhrases, phrase) }))
+                        }
+                      />
+                      <span className="text-xs text-muted-foreground">{phrase}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Essential sections present</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {ESSENTIAL_SECTIONS.map((section) => (
+                    <label key={section.id} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
+                      <Checkbox
+                        checked={form.sectionsPresent.includes(section.id)}
+                        onCheckedChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            sectionsPresent: toggleListValue(prev.sectionsPresent, section.id),
+                          }))
+                        }
+                      />
+                      <span className="text-xs text-muted-foreground">{section.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Conversion signals</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {[
+                    { key: 'ctaSpecific', label: 'Specific outcome CTA' },
+                    { key: 'socialProofCredible', label: 'Credible social proof' },
+                    { key: 'outcomesFocused', label: 'Outcome-led copy' },
+                    { key: 'customerLanguage', label: 'Customer language over buzzwords' },
+                  ].map((signal) => (
+                    <label key={signal.key} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
+                      <Checkbox
+                        checked={form.conversionSignals[signal.key as keyof CLGAuditInput['conversionSignals']]}
+                        onCheckedChange={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            conversionSignals: {
+                              ...prev.conversionSignals,
+                              [signal.key]:
+                                !prev.conversionSignals[signal.key as keyof CLGAuditInput['conversionSignals']],
+                            },
+                          }))
+                        }
+                      />
+                      <span className="text-xs text-muted-foreground">{signal.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Audit notes</Label>
+                <Textarea
+                  value={form.notes}
+                  onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Key quotes, missing anchors, strongest weakness..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Top quote evidence (optional, 3 snippets)</Label>
+                <div className="space-y-2">
+                  {[0, 1, 2].map((idx) => (
+                    <Input
+                      key={idx}
+                      value={form.quoteEvidence?.[idx] ?? ''}
+                      onChange={(e) =>
+                        setForm((prev) => {
+                          const next = [...(prev.quoteEvidence ?? ['', '', ''])];
+                          next[idx] = e.target.value;
+                          return { ...prev, quoteEvidence: next };
+                        })
+                      }
+                      placeholder={`Quote ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
           {result && result.recommendations.length > 0 && (
             <div className="space-y-2">
               <Button
