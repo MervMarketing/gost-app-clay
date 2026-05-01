@@ -89,6 +89,7 @@ export function buildDraftAuditInput(partial: {
 
 const FOUNDER_PHRASE_PENALTY = 2;
 
+/** 7 essential sections — weights match Merv rubric v1 / CLG Snapshot `scoringPrompt`. */
 const STRUCTURE_WEIGHTS: Record<string, number> = {
   hero: 4,
   differentiation: 4,
@@ -107,14 +108,58 @@ function nearestFive(value: number): number {
   return Math.round(value / 5) * 5;
 }
 
-function getBand(total: number): CLGAuditResult['band'] {
+/** Rubric v1 bands — thresholds from `positioning-scoring-rubric-v1.md`. */
+export function getScoreBand(total: number): CLGAuditResult['band'] {
   if (total >= 85) return 'strong';
   if (total >= 65) return 'leaking';
   if (total >= 40) return 'losing-room';
   return 'sabotaging';
 }
 
-function tagRecommendation(text: string): CLGRecommendation {
+/** Public copy aligned with the Merv rubric / CLG Snapshot output. */
+export function publicBandLabel(band: CLGAuditResult['band']): string {
+  if (band === 'strong') return 'Your homepage is converting.';
+  if (band === 'leaking') return "You're leaking buyers.";
+  if (band === 'losing-room') return 'Your messaging is losing the room.';
+  return 'Your homepage is sabotaging your product.';
+}
+
+export function nearestFivePoints(value: number): number {
+  return nearestFive(value);
+}
+
+/** Stage / motion tail recommendations (shared by local heuristic + Snapshot import). */
+export function getContextRecommendations(input: CLGAuditInput): string[] {
+  const recs: string[] = [];
+  if (input.stage === 'pre-seed' || input.stage === 'early-growth') {
+    recs.push(
+      'For early-stage teams, prioritize ICP specificity over broad TAM language; clarity is more valuable than completeness.',
+    );
+  }
+  if (input.companyType === 'services' || input.salesModel === 'complex-b2b') {
+    recs.push(
+      'For complex service sales, include a clear qualification path and expectation-setting CTA (diagnostic call, fit criteria, timeline).',
+    );
+  }
+  if (input.companyType === 'saas' || input.salesModel === 'product-led') {
+    recs.push(
+      'For SaaS/product-led motion, make first value obvious: show product proof early and define first-session success.',
+    );
+  }
+  if (input.companyType === 'ecommerce' || input.salesModel === 'transactional') {
+    recs.push(
+      'For transactional/ecommerce motion, surface proof and CTA high on page, minimize abstract positioning blocks, and tighten offer clarity.',
+    );
+  }
+  if (input.stage === 'mature') {
+    recs.push(
+      'For mature companies, prioritize message architecture consistency across segments and remove legacy copy that conflicts with current offer.',
+    );
+  }
+  return recs;
+}
+
+export function tagRecommendation(text: string): CLGRecommendation {
   if (text.includes('Hero') || text.includes('hero')) {
     return {
       text,
@@ -181,7 +226,7 @@ export function runCLGAudit(input: CLGAuditInput): CLGAuditResult {
   ].reduce((sum, enabled) => sum + (enabled ? 5 : 0), 0);
   const total = clamp(clarity + positioning + structure + conversion, 0, 100);
   const leakEstimate = nearestFive(100 - total);
-  const band = getBand(total);
+  const band = getScoreBand(total);
 
   const recommendations: string[] = [];
   const topIssues: CLGAuditIssue[] = [];
@@ -226,37 +271,13 @@ export function runCLGAudit(input: CLGAuditInput): CLGAuditResult {
     );
   }
 
-  if (input.stage === 'pre-seed' || input.stage === 'early-growth') {
-    recommendations.push(
-      'For early-stage teams, prioritize ICP specificity over broad TAM language; clarity is more valuable than completeness.',
-    );
-  }
-  if (input.companyType === 'services' || input.salesModel === 'complex-b2b') {
-    recommendations.push(
-      'For complex service sales, include a clear qualification path and expectation-setting CTA (diagnostic call, fit criteria, timeline).',
-    );
-  }
-  if (input.companyType === 'saas' || input.salesModel === 'product-led') {
-    recommendations.push(
-      'For SaaS/product-led motion, make first value obvious: show product proof early and define first-session success.',
-    );
-  }
-
-  if (input.companyType === 'ecommerce' || input.salesModel === 'transactional') {
-    recommendations.push(
-      'For transactional/ecommerce motion, surface proof and CTA high on page, minimize abstract positioning blocks, and tighten offer clarity.',
-    );
-  }
-  if (input.stage === 'mature') {
-    recommendations.push(
-      'For mature companies, prioritize message architecture consistency across segments and remove legacy copy that conflicts with current offer.',
-    );
-  }
+  recommendations.push(...getContextRecommendations(input));
 
   const taggedRecommendations = recommendations.slice(0, 6).map(tagRecommendation);
 
   return {
     runAt: new Date().toISOString(),
+    source: 'local-heuristic',
     input,
     score: {
       total,

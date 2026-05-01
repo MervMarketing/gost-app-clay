@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { CLGAuditInput, CLGAuditResult, CLGRecommendation, GOSTData } from '@/types/gost';
-import { buildDraftAuditInput, runCLGAudit } from '@/lib/clgAudit';
+import { buildDraftAuditInput, publicBandLabel, runCLGAudit } from '@/lib/clgAudit';
+import { fetchMervSnapshotScan, scanResultToCLGAuditResult } from '@/lib/clgSnapshot';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -47,12 +48,7 @@ interface CLGAuditPanelProps {
   onCreateRecommendations: (recommendations: CLGRecommendation[]) => void;
 }
 
-function toBandLabel(band: CLGAuditResult['band']): string {
-  if (band === 'strong') return 'Homepage is converting';
-  if (band === 'leaking') return 'Leaking buyers';
-  if (band === 'losing-room') return 'Losing the room';
-  return 'Homepage is sabotaging';
-}
+const snapshotApiBase = import.meta.env.VITE_CLG_SNAPSHOT_URL?.trim() || '';
 
 export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CLGAuditPanelProps) {
   const existing = (data.clgAudit as CLGAuditResult | undefined) ?? null;
@@ -86,6 +82,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   const [refineOpen, setRefineOpen] = useState(false);
   /** When false, Run applies an auto baseline; when true, Run keeps your checklist & scores. */
   const [manualSignals, setManualSignals] = useState(false);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
 
   const visibleRecommendations = useMemo(() => {
     if (!result) return [];
@@ -132,15 +129,59 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
     onSaveAudit(next);
   };
 
+  const runLiveSnapshot = async () => {
+    if (!snapshotApiBase) {
+      toast.error('Live Snapshot is not configured. Set VITE_CLG_SNAPSHOT_URL to your Snapshot deployment.');
+      return;
+    }
+    const url = form.homepageUrl.trim();
+    if (!url) {
+      toast.error('Add a homepage URL to scan.');
+      return;
+    }
+    setSnapshotLoading(true);
+    try {
+      const draftShell = buildDraftAuditInput({
+        companyName: form.companyName,
+        homepageUrl: url,
+        stage: form.stage,
+        companyType: form.companyType,
+        salesModel: form.salesModel,
+      });
+      const scan = await fetchMervSnapshotScan(snapshotApiBase, draftShell.homepageUrl);
+      const next = scanResultToCLGAuditResult(scan, {
+        companyName: draftShell.companyName,
+        homepageUrl: draftShell.homepageUrl,
+        stage: draftShell.stage,
+        companyType: draftShell.companyType,
+        salesModel: draftShell.salesModel,
+      });
+      setForm(next.input);
+      setResult(next);
+      onSaveAudit(next);
+      toast.success('Live Snapshot complete — scores match the Merv rubric.');
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Snapshot failed.';
+      toast.error(message);
+    } finally {
+      setSnapshotLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
           <CardTitle className="font-display text-xl">CLG Homepage Audit</CardTitle>
           <CardDescription className="leading-relaxed">
-            Add your homepage URL and run the audit — we apply a baseline scorecard automatically (no manual form required).
-            Live page scraping is not wired yet; expand “Refine homepage signals” if you have real quotes or a manual pass.
-            Then add recommendations to your repository and promote them into the GOST pyramid.
+            Same methodology as the Merv playbook:{' '}
+            <span className="text-foreground/90">Clarity / Positioning / Structure / Conversion</span> (100 pts) per{' '}
+            <span className="font-medium text-foreground/90">positioning-scoring-rubric-v1</span>.
+            Use <strong className="font-medium text-foreground">Run live Snapshot</strong> when{' '}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_CLG_SNAPSHOT_URL</code> points at your{' '}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">clg-snapshot</code> deploy (fetch + Claude scoring).
+            Otherwise <strong className="font-medium text-foreground">Run offline baseline</strong> fills a draft scorecard instantly.
+            Expand “Refine homepage signals” to paste real quotes or override checks. Then push recommendations into the repository.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -255,9 +296,37 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
             </div>
           </div>
 
-          <Button onClick={runAudit} className="w-full" size="lg">
-            Run CLG Audit
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {snapshotApiBase ? (
+              <Button
+                type="button"
+                className="w-full sm:flex-1"
+                size="lg"
+                disabled={snapshotLoading}
+                onClick={() => void runLiveSnapshot()}
+              >
+                {snapshotLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Run live Snapshot
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant={snapshotApiBase ? 'outline' : 'default'}
+              className="w-full sm:flex-1"
+              size="lg"
+              disabled={snapshotLoading}
+              onClick={runAudit}
+            >
+              Run offline baseline
+            </Button>
+          </div>
+          {!snapshotApiBase ? (
+            <p className="text-xs text-muted-foreground">
+              Tip: set <code className="rounded bg-muted px-1">VITE_CLG_SNAPSHOT_URL</code> to your Snapshot host for real
+              homepage extraction + rubric scoring. The Snapshot API must allow CORS from this app’s origin (or use a
+              same-site proxy).
+            </p>
+          ) : null}
 
           <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
             <Switch id="clg-manual-signals" checked={manualSignals} onCheckedChange={setManualSignals} />
@@ -437,9 +506,24 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
             </Badge>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {toBandLabel(result.band)} — estimated loss: ~{result.leakEstimate} buyers per 100 visitors.
-            </p>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">{publicBandLabel(result.band)}</p>
+              {result.snapshotMeta?.leakyFunnelHeadline ? (
+                <p>{result.snapshotMeta.leakyFunnelHeadline}</p>
+              ) : (
+                <p>Estimated leak: ~{result.leakEstimate} buyers per 100 visitors.</p>
+              )}
+              {result.snapshotMeta?.headlineQuote ? (
+                <p className="text-xs">
+                  <span className="font-medium text-foreground">Hero (scanned):</span> {result.snapshotMeta.headlineQuote}
+                </p>
+              ) : null}
+              {result.source === 'merv-snapshot' ? (
+                <Badge variant="outline" className="mt-1 text-[0.65rem]">
+                  Merv CLG Snapshot
+                </Badge>
+              ) : null}
+            </div>
             <div className="grid gap-2 sm:grid-cols-4">
               <div className="rounded-lg border border-border/80 p-3 text-xs">Clarity: {result.score.clarity}/30</div>
               <div className="rounded-lg border border-border/80 p-3 text-xs">Positioning: {result.score.positioning}/30</div>
@@ -453,6 +537,18 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
                   <ul className="space-y-2">
                     {result.topIssues.map((issue, idx) => (
                       <li key={`${issue.quote}-${idx}`} className="rounded-lg border border-border/80 p-3 text-xs">
+                        <div className="mb-2 flex flex-wrap gap-1">
+                          {issue.dimension ? (
+                            <Badge variant="secondary" className="text-[0.65rem]">
+                              Dim {issue.dimension}
+                            </Badge>
+                          ) : null}
+                          {issue.phraseId != null ? (
+                            <Badge variant="outline" className="text-[0.65rem]">
+                              Phrase #{issue.phraseId}
+                            </Badge>
+                          ) : null}
+                        </div>
                         <p className="text-muted-foreground"><strong>Quote:</strong> {issue.quote}</p>
                         <p className="mt-1 text-muted-foreground"><strong>Diagnosis:</strong> {issue.diagnosis}</p>
                         <p className="mt-1 text-muted-foreground"><strong>Fix:</strong> {issue.fix}</p>

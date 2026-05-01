@@ -141,6 +141,9 @@ export interface CLGAuditIssue {
   quote: string;
   diagnosis: string;
   fix: string;
+  /** Set when the issue came from Merv Snapshot (rubric phrase id). */
+  phraseId?: number | null;
+  dimension?: 'A' | 'B' | 'C' | 'D';
 }
 
 export interface CLGRecommendation {
@@ -154,6 +157,8 @@ export interface CLGRecommendation {
 
 export interface CLGAuditResult {
   runAt: string;
+  /** `merv-snapshot` = live CLG Snapshot API (same rubric as positioning-scoring-rubric-v1). */
+  source?: 'local-heuristic' | 'merv-snapshot';
   input: CLGAuditInput;
   score: {
     total: number;
@@ -167,6 +172,13 @@ export interface CLGAuditResult {
   topIssues: CLGAuditIssue[];
   recommendations: string[];
   taggedRecommendations: CLGRecommendation[];
+  /** Present when `source === 'merv-snapshot'`. */
+  snapshotMeta?: {
+    headlineQuote: string;
+    leakyFunnelHeadline: string;
+    scannedUrl: string;
+    scannedAt?: string;
+  };
 }
 
 export interface GOSTData {
