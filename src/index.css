@@ -1,0 +1,195 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design system aligned with clay.com marketing UI:
+   warm oat backgrounds, near-black type, black primary CTAs,
+   Inter body + Plus Jakarta Sans headings, generous radius */
+
+@layer base {
+  :root {
+    /* Surfaces — oat / warm neutrals */
+    --background: 40 33% 97%;
+    --foreground: 60 6% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 60 6% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 60 6% 10%;
+
+    /* Primary action = ink (Clay-style black buttons) */
+    --primary: 60 6% 10%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 24% 95%;
+    --secondary-foreground: 60 6% 12%;
+
+    --muted: 40 18% 94%;
+    --muted-foreground: 40 5% 42%;
+
+    --accent: 40 22% 93%;
+    --accent-foreground: 60 6% 12%;
+
+    --destructive: 350 75% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 35 90% 52%;
+    --warning-foreground: 35 100% 12%;
+    --warning-muted: 40 60% 94%;
+
+    --success: 152 55% 38%;
+    --success-foreground: 0 0% 100%;
+    --success-muted: 152 40% 94%;
+
+    /* Pyramid — cool blues (Clay “blueberry” family, distinct steps) */
+    --pyramid-goal: 215 85% 32%;
+    --pyramid-objective: 213 70% 40%;
+    --pyramid-strategy: 211 55% 48%;
+    --pyramid-tactic: 210 40% 55%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 210 96% 45%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 40 30% 96%;
+    --sidebar-foreground: 60 6% 18%;
+    --sidebar-primary: 60 6% 10%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 40 22% 93%;
+    --sidebar-accent-foreground: 60 6% 12%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 210 96% 45%;
+  }
+
+  .dark {
+    --background: 220 16% 8%;
+    --foreground: 40 20% 96%;
+
+    --card: 220 14% 11%;
+    --card-foreground: 40 20% 96%;
+
+    --popover: 220 14% 11%;
+    --popover-foreground: 40 20% 96%;
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 220 16% 8%;
+
+    --secondary: 220 12% 16%;
+    --secondary-foreground: 40 15% 90%;
+
+    --muted: 220 12% 14%;
+    --muted-foreground: 40 8% 62%;
+
+    --accent: 220 12% 18%;
+    --accent-foreground: 40 20% 96%;
+
+    --destructive: 350 65% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 35 85% 48%;
+    --warning-foreground: 35 100% 10%;
+    --warning-muted: 35 30% 14%;
+
+    --success: 152 50% 42%;
+    --success-foreground: 152 100% 10%;
+    --success-muted: 152 30% 14%;
+
+    --pyramid-goal: 210 75% 58%;
+    --pyramid-objective: 211 65% 62%;
+    --pyramid-strategy: 212 50% 65%;
+    --pyramid-tactic: 213 40% 68%;
+
+    --border: 220 12% 18%;
+    --input: 220 12% 18%;
+    --ring: 210 90% 55%;
+
+    --sidebar-background: 220 14% 10%;
+    --sidebar-foreground: 40 15% 90%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 220 16% 8%;
+    --sidebar-accent: 220 12% 16%;
+    --sidebar-accent-foreground: 40 20% 96%;
+    --sidebar-border: 220 12% 18%;
+    --sidebar-ring: 210 90% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased font-sans;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display font-semibold tracking-tight text-foreground;
+  }
+
+  h1 {
+    letter-spacing: -0.04em;
+  }
+
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.03em;
+  }
+}
+
+@layer utilities {
+  .bg-pyramid-goal {
+    background-color: hsl(var(--pyramid-goal));
+  }
+  .bg-pyramid-objective {
+    background-color: hsl(var(--pyramid-objective));
+  }
+  .bg-pyramid-strategy {
+    background-color: hsl(var(--pyramid-strategy));
+  }
+  .bg-pyramid-tactic {
+    background-color: hsl(var(--pyramid-tactic));
+  }
+
+  .bg-warning-muted {
+    background-color: hsl(var(--warning-muted));
+  }
+  .text-warning {
+    color: hsl(var(--warning));
+  }
+  .border-warning {
+    border-color: hsl(var(--warning));
+  }
+
+  .bg-success-muted {
+    background-color: hsl(var(--success-muted));
+  }
+  .text-success {
+    color: hsl(var(--success));
+  }
+  .border-success {
+    border-color: hsl(var(--success));
+  }
+
+  .shadow-subtle {
+    box-shadow:
+      0 1px 2px 0 hsl(60 6% 10% / 0.04),
+      0 1px 3px 0 hsl(60 6% 10% / 0.06);
+  }
+
+  .shadow-elevated {
+    box-shadow:
+      0 4px 6px -1px hsl(60 6% 10% / 0.06),
+      0 2px 4px -2px hsl(60 6% 10% / 0.04);
+  }
+}

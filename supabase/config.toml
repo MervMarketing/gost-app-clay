@@ -1,0 +1,11 @@
+project_id = "qwyadbnkkdckrgrqdcec"
+
+[auth]
+site_url = "https://gost-pyramid-builder.lovable.app"
+
+[auth.email]
+enable_confirmations = true
+
+[auth.email.template.confirmation]
+subject = "Confirm your Merv account"
+content_path = "./templates/confirmation.html"
