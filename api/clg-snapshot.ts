@@ -32,6 +32,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   const base = upstream.replace(/\/$/, '');
   const scanUrl = base.endsWith('/api/scan') ? base : `${base}/api/scan`;
 
+  let host: string;
+  try {
+    host = new URL(scanUrl).hostname;
+  } catch {
+    res.status(500).json({
+      error:
+        'CLG_SNAPSHOT_URL must be a full URL with https:// (example: https://your-snapshot.vercel.app).',
+      detail: `Got: ${upstream.slice(0, 120)}`,
+    });
+    return;
+  }
+
   try {
     const r = await fetch(scanUrl, {
       method: 'POST',
@@ -49,8 +61,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Unknown error';
     res.status(502).json({
-      error: 'Could not reach the Snapshot service from GOST. Check CLG_SNAPSHOT_URL and that Snapshot is deployed.',
-      detail: msg,
+      error: 'GOST could not connect to your Snapshot server.',
+      detail: `${msg} · host: ${host} · path: /api/scan`,
+      hint: 'Open that Snapshot URL in a browser, deploy clg-snapshot on Vercel, and set ANTHROPIC_API_KEY there. Redeploy GOST after changing CLG_SNAPSHOT_URL.',
     });
   }
 }

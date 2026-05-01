@@ -93,8 +93,9 @@ export async function fetchMervSnapshotScan(
   });
   const data: unknown = await res.json();
   if (!res.ok) {
-    const err = data as { error?: string; detail?: string };
-    throw new Error(err.error || err.detail || `Snapshot request failed (${res.status})`);
+    const err = data as { error?: string; detail?: string; hint?: string };
+    const parts = [err.error, err.detail, err.hint].filter(Boolean);
+    throw new Error(parts.length > 0 ? parts.join(' — ') : `Snapshot request failed (${res.status})`);
   }
   return data as MervScanResult;
 }
