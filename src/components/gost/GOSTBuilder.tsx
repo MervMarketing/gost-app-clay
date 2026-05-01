@@ -113,8 +113,7 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
   
   // Focused tactic in Active Plan (for navigation from All Tactics)
   const [focusedTacticId, setFocusedTacticId] = useState<string | null>(null);
-  const showAuditTab = !isViewOnly && (data.objectives.length > 0 || Boolean(data.clgAudit));
-  
+
   // Handler for layer clicks - scrolls to details panel on mobile
   const handleLayerClick = useCallback((layer: PyramidLayer) => {
     setActiveLayer(layer);
@@ -166,6 +165,9 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
     getIssueMessage,
     executionStats
   } = useGOSTData({ initialData, isViewOnly: isViewOnlyProp, onSave });
+
+  const showAuditTab =
+    !isViewOnly && (data.objectives.length > 0 || Boolean(data.clgAudit));
 
   // Handler for execution bulk import (legacy - strategies + tactics)
   const handleExecutionImport = (strategies: ExecutionImportData[]) => {
