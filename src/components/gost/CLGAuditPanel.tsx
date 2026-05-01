@@ -48,7 +48,9 @@ interface CLGAuditPanelProps {
   onCreateRecommendations: (recommendations: CLGRecommendation[]) => void;
 }
 
-const snapshotApiBase = import.meta.env.VITE_CLG_SNAPSHOT_URL?.trim() || '';
+/** Dev-only: direct browser → Snapshot (needs CORS on Snapshot). Prod uses `/api/clg-snapshot` + CLG_SNAPSHOT_URL on Vercel. */
+const snapshotDevDirectBase = import.meta.env.VITE_CLG_SNAPSHOT_URL?.trim() || '';
+const canRunLiveSnapshot = import.meta.env.PROD || Boolean(snapshotDevDirectBase);
 
 export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CLGAuditPanelProps) {
   const existing = (data.clgAudit as CLGAuditResult | undefined) ?? null;
@@ -130,8 +132,10 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   };
 
   const runLiveSnapshot = async () => {
-    if (!snapshotApiBase) {
-      toast.error('Live Snapshot is not configured. Set VITE_CLG_SNAPSHOT_URL to your Snapshot deployment.');
+    if (import.meta.env.DEV && !snapshotDevDirectBase) {
+      toast.error(
+        'Local dev: set VITE_CLG_SNAPSHOT_URL, or run `vercel dev` so /api/clg-snapshot exists. Production: set CLG_SNAPSHOT_URL on Vercel.',
+      );
       return;
     }
     const url = form.homepageUrl.trim();
@@ -148,7 +152,10 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
         companyType: form.companyType,
         salesModel: form.salesModel,
       });
-      const scan = await fetchMervSnapshotScan(snapshotApiBase, draftShell.homepageUrl);
+      const scan = await fetchMervSnapshotScan(
+        draftShell.homepageUrl,
+        import.meta.env.DEV ? snapshotDevDirectBase : undefined,
+      );
       const next = scanResultToCLGAuditResult(scan, {
         companyName: draftShell.companyName,
         homepageUrl: draftShell.homepageUrl,
@@ -177,10 +184,12 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
             Same methodology as the Merv playbook:{' '}
             <span className="text-foreground/90">Clarity / Positioning / Structure / Conversion</span> (100 pts) per{' '}
             <span className="font-medium text-foreground/90">positioning-scoring-rubric-v1</span>.
-            Use <strong className="font-medium text-foreground">Run live Snapshot</strong> when{' '}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_CLG_SNAPSHOT_URL</code> points at your{' '}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">clg-snapshot</code> deploy (fetch + Claude scoring).
-            Otherwise <strong className="font-medium text-foreground">Run offline baseline</strong> fills a draft scorecard instantly.
+            <strong className="font-medium text-foreground">Run live Snapshot</strong> (production) uses this app’s{' '}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">/api/clg-snapshot</code> proxy — set{' '}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">CLG_SNAPSHOT_URL</code> on Vercel (server) to your Snapshot
+            base URL. Local dev: set <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_CLG_SNAPSHOT_URL</code> or run{' '}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">vercel dev</code>.
+            <strong className="font-medium text-foreground"> Run offline baseline</strong> works without Snapshot.
             Expand “Refine homepage signals” to paste real quotes or override checks. Then push recommendations into the repository.
           </CardDescription>
         </CardHeader>
@@ -297,7 +306,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row">
-            {snapshotApiBase ? (
+            {canRunLiveSnapshot ? (
               <Button
                 type="button"
                 className="w-full sm:flex-1"
@@ -311,7 +320,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
             ) : null}
             <Button
               type="button"
-              variant={snapshotApiBase ? 'outline' : 'default'}
+              variant={canRunLiveSnapshot ? 'outline' : 'default'}
               className="w-full sm:flex-1"
               size="lg"
               disabled={snapshotLoading}
@@ -320,11 +329,16 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
               Run offline baseline
             </Button>
           </div>
-          {!snapshotApiBase ? (
+          {import.meta.env.PROD ? (
             <p className="text-xs text-muted-foreground">
-              Tip: set <code className="rounded bg-muted px-1">VITE_CLG_SNAPSHOT_URL</code> to your Snapshot host for real
-              homepage extraction + rubric scoring. The Snapshot API must allow CORS from this app’s origin (or use a
-              same-site proxy).
+              Production: add <code className="rounded bg-muted px-1">CLG_SNAPSHOT_URL</code> on Vercel (Snapshot base, e.g.{' '}
+              https://snapshot.mervmarketing.com). The app calls it from the server — no CORS setup needed on Snapshot for
+              GOST.
+            </p>
+          ) : !snapshotDevDirectBase ? (
+            <p className="text-xs text-muted-foreground">
+              Local: add <code className="rounded bg-muted px-1">VITE_CLG_SNAPSHOT_URL</code> for a direct scan, or run{' '}
+              <code className="rounded bg-muted px-1">vercel dev</code> to use the proxy.
             </p>
           ) : null}
 

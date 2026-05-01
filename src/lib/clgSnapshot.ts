@@ -75,8 +75,17 @@ export function getSnapshotScanUrl(apiBaseUrl: string): string {
   return `${trimmed}/api/scan`;
 }
 
-export async function fetchMervSnapshotScan(apiBaseUrl: string, homepageUrl: string): Promise<MervScanResult> {
-  const scanUrl = getSnapshotScanUrl(apiBaseUrl);
+/**
+ * @param homepageUrl URL to scan
+ * @param devDirectBase In local dev only: Snapshot base (VITE_CLG_SNAPSHOT_URL). In production, calls same-origin `/api/clg-snapshot` (needs CLG_SNAPSHOT_URL on Vercel).
+ */
+export async function fetchMervSnapshotScan(
+  homepageUrl: string,
+  devDirectBase?: string,
+): Promise<MervScanResult> {
+  const useDevDirect = Boolean(import.meta.env.DEV && devDirectBase?.trim());
+  const scanUrl = useDevDirect ? getSnapshotScanUrl(devDirectBase!.trim()) : '/api/clg-snapshot';
+
   const res = await fetch(scanUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
