@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Flag, Compass, CheckSquare, ArrowRight, ArrowLeft, X, Sparkles } from 'lucide-react';
+import { Target, Compass, ArrowRight, ArrowLeft, X, Sparkles, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -13,32 +13,36 @@ const tourSteps = [
     id: 'welcome',
     icon: Sparkles,
     title: 'Welcome',
-    description: 'Start simple: set one clear 90-day goal, then build down from it.',
-    tip: 'You can ignore advanced tools until your core plan is in place.',
+    description:
+      'Every plan starts with a CLG homepage audit. Its scores and recommendations shape what you add to the repository and promote into your GOST pyramid.',
+    tip: 'Run the audit first, push recommendations into the repository, then align goal, objectives, strategies, and tactics with that backlog.',
+  },
+  {
+    id: 'clg-audit',
+    icon: ClipboardCheck,
+    title: 'Step 1: CLG Audit (start here)',
+    layerLabel: 'Starting point',
+    description:
+      'Capture how your homepage reads today. You get tiered recommendations (DIY / DWY / DFY) grounded in clarity, positioning, structure, and conversion.',
+    tip: 'Add visible recommendations to the repository, then promote the ones that belong in your active plan. Tier 1 + DIY is the default “small start.”',
   },
   {
     id: 'goal',
     icon: Target,
-    title: 'Step 1: Goal + Objectives',
-    description: 'Define one goal and 3-5 measurable objectives.',
-    tip: 'If this part is clear, everything else gets easier.',
-    highlight: 'goal',
+    title: 'Step 2: Goal + Objectives',
+    layerLabel: 'Layer 1 of 3',
+    description:
+      'Set your 90-day goal and measurable objectives so they reflect what the audit exposed — not generic placeholders.',
+    tip: 'If the audit flagged a conversion gap, make sure at least one objective names the metric you are trying to move.',
   },
   {
     id: 'strategies',
     icon: Compass,
-    title: 'Step 2: Strategies + Tactics',
-    description: 'Choose your approach, then add concrete actions.',
-    tip: 'If a tactic is vague, rewrite it until it is assignable.',
-    highlight: 'strategies',
-  },
-  {
-    id: 'advanced',
-    icon: Flag,
-    title: 'Step 3: Optional CLG Audit',
-    description: 'Once your base plan exists, use CLG Audit for homepage recommendations.',
-    tip: 'Start with Tier 1 (small + DIY). Unlock more only when needed.',
-    highlight: 'objectives',
+    title: 'Step 3: Strategies + Tactics',
+    layerLabel: 'Layer 2–3 of 3',
+    description:
+      'Strategies and tactics should ladder up from the same story the audit is telling. Pull from repository items you already prioritized.',
+    tip: 'If a tactic cannot be assigned and dated, rewrite it until it can — or leave it in the repository until it is concrete enough.',
   },
 ];
 
@@ -137,22 +141,20 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
               <div className={cn(
                 "w-12 h-12 rounded-xl flex items-center justify-center",
                 step.id === 'welcome' && "bg-primary/10 text-primary",
+                step.id === 'clg-audit' && "bg-primary/10 text-primary",
                 step.id === 'goal' && "bg-pyramid-goal/20 text-pyramid-goal",
-                step.id === 'objectives' && "bg-pyramid-objective/20 text-pyramid-objective",
                 step.id === 'strategies' && "bg-pyramid-strategy/20 text-pyramid-strategy",
-                step.id === 'tactics' && "bg-pyramid-tactic/20 text-pyramid-tactic",
               )}>
                 <Icon className="w-6 h-6" />
               </div>
-              {step.highlight && (
+              {'layerLabel' in step && step.layerLabel && (
                 <div className={cn(
                   "px-2 py-0.5 rounded-full text-xs font-medium",
+                  step.id === 'clg-audit' && "bg-primary/10 text-primary",
                   step.id === 'goal' && "bg-pyramid-goal/10 text-pyramid-goal",
-                  step.id === 'objectives' && "bg-pyramid-objective/10 text-pyramid-objective",
                   step.id === 'strategies' && "bg-pyramid-strategy/10 text-pyramid-strategy",
-                  step.id === 'tactics' && "bg-pyramid-tactic/10 text-pyramid-tactic",
                 )}>
-                  Layer {Math.max(currentStep, 1)} of 3
+                  {step.layerLabel}
                 </div>
               )}
             </div>

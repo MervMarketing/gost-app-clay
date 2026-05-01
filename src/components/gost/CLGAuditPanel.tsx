@@ -3,7 +3,7 @@ import { CLGAuditInput, CLGAuditResult, CLGRecommendation, GOSTData } from '@/ty
 import { runCLGAudit } from '@/lib/clgAudit';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -96,6 +96,9 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
       <Card>
         <CardHeader>
           <CardTitle className="font-display text-xl">CLG Homepage Audit</CardTitle>
+          <CardDescription className="leading-relaxed">
+            Start here: run the audit, then add recommendations to your repository and promote them into goal, objectives, strategies, and tactics.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2">

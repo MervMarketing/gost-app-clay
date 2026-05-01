@@ -48,7 +48,7 @@ export function IntroPage({ onGetStarted }: IntroPageProps) {
               Turn ideas into a plan your team can actually run.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground md:text-xl md:leading-[1.5]">
-              Align goals, objectives, strategies, and tactics in one place — so nothing ships out of order.
+              Begin with a CLG homepage audit, then let tiered recommendations populate your backlog so goals, objectives, strategies, and tactics stay aligned to what the page is actually doing.
             </p>
 
             <div className="mt-10 flex w-full flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
@@ -82,7 +82,7 @@ export function IntroPage({ onGetStarted }: IntroPageProps) {
               </div>
               <h2 className="font-display text-base font-semibold">What is this?</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                A structured GOST builder: Goal, Objectives, Strategies, and Tactics — so the work ladders up.
+                A GOST builder led by a CLG homepage audit — recommendations feed the repository, then you promote work into the pyramid.
               </p>
             </div>
             <div className="rounded-2xl border border-border/80 bg-card p-6 text-left shadow-subtle transition-shadow hover:shadow-elevated">

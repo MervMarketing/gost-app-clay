@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Target, Flag, Compass, CheckSquare, Sparkles, ArrowRight } from 'lucide-react';
+import { Target, Flag, Compass, CheckSquare, Sparkles, ArrowRight, ClipboardCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -8,6 +8,13 @@ interface DemoLoaderProps {
 }
 
 const steps = [
+  {
+    id: 'clg',
+    activeLabel: 'Loading CLG audit context',
+    completeLabel: 'Audit + recommendations ready',
+    icon: ClipboardCheck,
+    description: 'Homepage signals → tiered DIY / DWY / DFY actions',
+  },
   { 
     id: 'goal', 
     activeLabel: 'Setting 90-Day Goal', 
@@ -93,7 +100,7 @@ export function DemoLoader({ onComplete }: DemoLoaderProps) {
             Fotofetch Growth + CLG Playbook
           </h2>
           <p className="mt-3 text-sm text-muted-foreground/80 animate-fade-in">
-            Includes tiered DIY / DWY / DFY recommendations
+            Audit-first workflow: recommendations inform the full GOST stack
           </p>
         </div>
 

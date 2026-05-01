@@ -83,7 +83,16 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
   const [showQuickImport, setShowQuickImport] = useState(false);
   const [activeLayer, setActiveLayer] = useState<PyramidLayer>('goal');
   const [confirmedStages, setConfirmedStages] = useState<Set<PyramidLayer>>(new Set());
-  const [activeTab, setActiveTab] = useState<'builder' | 'repository' | 'audit'>('builder');
+  const [activeTab, setActiveTab] = useState<'builder' | 'repository' | 'audit'>(() => {
+    if (isViewOnlyProp) return 'builder';
+    const hasPyramidContent = Boolean(
+      initialData?.executionGoal?.text?.trim() ||
+        (initialData?.objectives?.length ?? 0) > 0 ||
+        (initialData?.strategies?.length ?? 0) > 0 ||
+        (initialData?.tactics?.length ?? 0) > 0,
+    );
+    return hasPyramidContent ? 'builder' : 'audit';
+  });
   const [clientFeedbackMap, setClientFeedbackMap] = useState<Record<string, { priority: ClientPriority; note?: string }>>({});
   
   // Load client feedback for admin view
@@ -166,8 +175,7 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
     executionStats
   } = useGOSTData({ initialData, isViewOnly: isViewOnlyProp, onSave });
 
-  const showAuditTab =
-    !isViewOnly && (data.objectives.length > 0 || Boolean(data.clgAudit));
+  const showAuditTab = !isViewOnly;
 
   // Handler for execution bulk import (legacy - strategies + tactics)
   const handleExecutionImport = (strategies: ExecutionImportData[]) => {
