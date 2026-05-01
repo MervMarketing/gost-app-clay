@@ -775,6 +775,10 @@ export function useGOSTData(options: UseGOSTDataOptions = {}) {
     setData(prev => ({ ...prev, timeframe }));
   }, []);
 
+  const updatePlanMeta = useCallback((key: string, value: unknown) => {
+    setData((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
   // Reset to preset
   const resetToPreset = useCallback(() => {
     setData(fotofetchPreset);
@@ -936,6 +940,7 @@ export function useGOSTData(options: UseGOSTDataOptions = {}) {
     removeRepositoryItem,
     promoteRepositoryItem,
     setTimeframe,
+    updatePlanMeta,
     updatePulseFrequency,
     resetToPreset,
     startFresh,

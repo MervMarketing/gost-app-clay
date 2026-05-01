@@ -12,41 +12,33 @@ const tourSteps = [
   {
     id: 'welcome',
     icon: Sparkles,
-    title: 'Welcome to Your Execution Plan',
-    description: 'This is a complete 90-day plan with Goals, Objectives, Strategies, and Tactics working together as a unified framework.',
-    tip: 'Each layer cascades down — your Goal drives Objectives, which drive Strategies, which drive Tactics.',
+    title: 'Welcome',
+    description: 'Start simple: set one clear 90-day goal, then build down from it.',
+    tip: 'You can ignore advanced tools until your core plan is in place.',
   },
   {
     id: 'goal',
     icon: Target,
-    title: '90-Day Execution Goal',
-    description: 'The single most important outcome you want to achieve. This is your north star for the entire planning cycle.',
-    tip: 'Think direction, not metrics. What does success look like in 90 days?',
+    title: 'Step 1: Goal + Objectives',
+    description: 'Define one goal and 3-5 measurable objectives.',
+    tip: 'If this part is clear, everything else gets easier.',
     highlight: 'goal',
-  },
-  {
-    id: 'objectives',
-    icon: Flag,
-    title: 'Objectives',
-    description: 'Measurable milestones that tell you if you\'re on track. Each objective should be specific and time-bound.',
-    tip: 'Aim for 3-5 objectives. More than that dilutes focus.',
-    highlight: 'objectives',
   },
   {
     id: 'strategies',
     icon: Compass,
-    title: 'Strategies',
-    description: 'The approaches you\'ll take to achieve each objective. Strategies answer "how" without getting into specifics.',
-    tip: 'Each objective can have multiple strategies. Think of these as your playbook.',
+    title: 'Step 2: Strategies + Tactics',
+    description: 'Choose your approach, then add concrete actions.',
+    tip: 'If a tactic is vague, rewrite it until it is assignable.',
     highlight: 'strategies',
   },
   {
-    id: 'tactics',
-    icon: CheckSquare,
-    title: 'Tactics',
-    description: 'The specific, executable actions. These are the tasks your team will actually work on day-to-day.',
-    tip: 'Tactics should be concrete and assignable. If it\'s not actionable, it\'s still a strategy.',
-    highlight: 'tactics',
+    id: 'advanced',
+    icon: Flag,
+    title: 'Step 3: Optional CLG Audit',
+    description: 'Once your base plan exists, use CLG Audit for homepage recommendations.',
+    tip: 'Start with Tier 1 (small + DIY). Unlock more only when needed.',
+    highlight: 'objectives',
   },
 ];
 
@@ -160,7 +152,7 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
                   step.id === 'strategies' && "bg-pyramid-strategy/10 text-pyramid-strategy",
                   step.id === 'tactics' && "bg-pyramid-tactic/10 text-pyramid-tactic",
                 )}>
-                  Layer {currentStep} of 4
+                  Layer {Math.max(currentStep, 1)} of 3
                 </div>
               )}
             </div>

@@ -25,7 +25,7 @@ import { UserMenu } from './UserMenu';
 import { ExecutionBulkImport, ExecutionImportData } from './ExecutionBulkImport';
 import { FullPlanImport, FullPlanImportData } from './FullPlanImport';
 import { PyramidItemEditDialog } from './PyramidItemEditDialog';
-import { PyramidLayer, GOSTData, TacticStatus, Objective, Strategy, Tactic } from '@/types/gost';
+import { PyramidLayer, GOSTData, TacticStatus, Objective, Strategy, Tactic, CLGRecommendation } from '@/types/gost';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
@@ -38,8 +38,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { RotateCcw, Maximize2, Upload, MoreVertical, Archive, Eye, FileX, ArrowLeft, Rocket, LayoutDashboard, PlayCircle } from 'lucide-react';
+import { RotateCcw, Maximize2, Upload, MoreVertical, Archive, Eye, FileX, ArrowLeft, Rocket, LayoutDashboard, PlayCircle, ClipboardCheck } from 'lucide-react';
 import { RepositoryDashboard } from './RepositoryDashboard';
+import { CLGAuditPanel } from './CLGAuditPanel';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { parseGOSTFromText } from '@/lib/gostSerializer';
@@ -82,7 +83,7 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
   const [showQuickImport, setShowQuickImport] = useState(false);
   const [activeLayer, setActiveLayer] = useState<PyramidLayer>('goal');
   const [confirmedStages, setConfirmedStages] = useState<Set<PyramidLayer>>(new Set());
-  const [activeTab, setActiveTab] = useState<'builder' | 'repository'>('builder');
+  const [activeTab, setActiveTab] = useState<'builder' | 'repository' | 'audit'>('builder');
   const [clientFeedbackMap, setClientFeedbackMap] = useState<Record<string, { priority: ClientPriority; note?: string }>>({});
   
   // Load client feedback for admin view
@@ -112,6 +113,7 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
   
   // Focused tactic in Active Plan (for navigation from All Tactics)
   const [focusedTacticId, setFocusedTacticId] = useState<string | null>(null);
+  const showAuditTab = !isViewOnly && (data.objectives.length > 0 || Boolean(data.clgAudit));
   
   // Handler for layer clicks - scrolls to details panel on mobile
   const handleLayerClick = useCallback((layer: PyramidLayer) => {
@@ -153,6 +155,7 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
     removeRepositoryItem,
     promoteRepositoryItem,
     setTimeframe,
+    updatePlanMeta,
     updatePulseFrequency,
     resetToPreset,
     startFresh,
@@ -651,7 +654,7 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
         )}
 
         {/* Tabs for Builder vs Repository */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'builder' | 'repository')} className="mb-4 sm:mb-6">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'builder' | 'repository' | 'audit')} className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <TabsList className="w-full sm:w-auto">
               <TabsTrigger value="builder" className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-xs sm:text-sm">
@@ -667,6 +670,12 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
                       {data.repository.filter(i => i.status === 'backlog' || i.status === 'queued').length}
                     </span>
                   )}
+                </TabsTrigger>
+              )}
+              {showAuditTab && (
+                <TabsTrigger value="audit" className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-xs sm:text-sm">
+                  <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="sm:inline">CLG Audit</span>
                 </TabsTrigger>
               )}
             </TabsList>
@@ -870,6 +879,35 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
                   }
                   setActiveTab('builder');
                   setActiveLayer('tactics');
+                }}
+              />
+            </TabsContent>
+          )}
+          {showAuditTab && (
+            <TabsContent value="audit" className="mt-6">
+              <CLGAuditPanel
+                data={data}
+                onSaveAudit={(audit) => updatePlanMeta('clgAudit', audit)}
+                onCreateRecommendations={(recommendations: CLGRecommendation[]) => {
+                  recommendations.forEach((rec) => {
+                    const abilityToExecute =
+                      rec.effort === 'low' ? 'high' : rec.effort === 'medium' ? 'medium' : 'low';
+                    const timeHorizon = rec.window === '30-day' ? 'short' : rec.window === '60-day' ? 'medium' : 'long';
+                    addRepositoryItem({
+                      type: 'tactic',
+                      description: rec.text,
+                      notes: `CLG recommendation · impact=${rec.impact} · effort=${rec.effort} · window=${rec.window}`,
+                      outcomeSupported: null,
+                      growthStage: 'scaling',
+                      companyContext: 'small_team',
+                      abilityToExecute,
+                      timeHorizon,
+                      status: 'backlog',
+                      executionWindow: rec.window,
+                    });
+                  });
+                  toast.success(`Added ${recommendations.length} recommendations to repository`);
+                  setActiveTab('repository');
                 }}
               />
             </TabsContent>

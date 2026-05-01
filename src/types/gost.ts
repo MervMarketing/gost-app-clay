@@ -112,6 +112,63 @@ export interface RepositoryItem {
   pulseChecks?: PulseCheck[];
 }
 
+export type CLGCompanyStage = 'pre-seed' | 'early-growth' | 'growth' | 'mature';
+export type CLGCompanyType = 'saas' | 'services' | 'ecommerce' | 'marketplace' | 'other';
+export type CLGSalesModel = 'complex-b2b' | 'transactional' | 'product-led' | 'hybrid';
+
+export interface CLGAuditInput {
+  companyName: string;
+  homepageUrl: string;
+  stage: CLGCompanyStage;
+  companyType: CLGCompanyType;
+  salesModel: CLGSalesModel;
+  whatIsIt: number;
+  whoIsItFor: number;
+  whyBetter: number;
+  founderPhrases: string[];
+  sectionsPresent: string[];
+  conversionSignals: {
+    ctaSpecific: boolean;
+    socialProofCredible: boolean;
+    outcomesFocused: boolean;
+    customerLanguage: boolean;
+  };
+  quoteEvidence?: string[];
+  notes?: string;
+}
+
+export interface CLGAuditIssue {
+  quote: string;
+  diagnosis: string;
+  fix: string;
+}
+
+export interface CLGRecommendation {
+  text: string;
+  impact: 'high' | 'medium' | 'low';
+  effort: 'low' | 'medium' | 'high';
+  window: '30-day' | '60-day' | '90-day';
+  tier: 1 | 2 | 3;
+  recommendedFor: Array<'diy' | 'dwy' | 'dfy'>;
+}
+
+export interface CLGAuditResult {
+  runAt: string;
+  input: CLGAuditInput;
+  score: {
+    total: number;
+    clarity: number;
+    positioning: number;
+    structure: number;
+    conversion: number;
+  };
+  leakEstimate: number;
+  band: 'strong' | 'leaking' | 'losing-room' | 'sabotaging';
+  topIssues: CLGAuditIssue[];
+  recommendations: string[];
+  taggedRecommendations: CLGRecommendation[];
+}
+
 export interface GOSTData {
   executionGoal: ExecutionGoal;
   objectives: Objective[];
@@ -121,6 +178,7 @@ export interface GOSTData {
   repository: RepositoryItem[];
   // Plan-level settings
   pulseFrequency?: PulseFrequency; // Default: 'standard'
+  clgAudit?: CLGAuditResult;
   [key: string]: unknown; // Allow JSON serialization
 }
 

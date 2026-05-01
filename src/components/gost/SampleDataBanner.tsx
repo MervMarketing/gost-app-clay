@@ -43,7 +43,7 @@ export function SampleDataBanner({ onStartFresh, onDismiss }: SampleDataBannerPr
                   You're exploring sample data
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  This is the ACME Corp example. Changes won't be saved.
+                  This is the Fotofetch + CLG tiered example. Changes won't be saved.
                 </p>
               </div>
             </div>

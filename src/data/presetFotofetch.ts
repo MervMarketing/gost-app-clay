@@ -455,5 +455,98 @@ export const fotofetchPreset: GOSTData = {
       status: 'backlog',
       createdAt: '2026-01-22T11:00:00Z'
     }
-  ]
+  ],
+  clgAudit: {
+    runAt: '2026-02-01T10:30:00Z',
+    input: {
+      companyName: 'Fotofetch',
+      homepageUrl: 'https://fotofetch.com',
+      stage: 'growth',
+      companyType: 'services',
+      salesModel: 'complex-b2b',
+      whatIsIt: 8,
+      whoIsItFor: 7,
+      whyBetter: 6,
+      founderPhrases: ['For businesses of all sizes', 'Seamless experience'],
+      sectionsPresent: ['hero', 'differentiation', 'demo', 'trust', 'closingCta'],
+      conversionSignals: {
+        ctaSpecific: true,
+        socialProofCredible: true,
+        outcomesFocused: false,
+        customerLanguage: true,
+      },
+      quoteEvidence: [
+        '“Marketing content and photos for modern teams.”',
+        '“For businesses of all sizes.”',
+        'No clear offer doors between buyers and photographers.',
+      ],
+      notes: 'Demo audit: starting point before tier unlock flow.',
+    },
+    score: {
+      total: 73,
+      clarity: 21,
+      positioning: 26,
+      structure: 14,
+      conversion: 12,
+    },
+    leakEstimate: 25,
+    band: 'leaking',
+    topIssues: [
+      {
+        quote: '“For businesses of all sizes.”',
+        diagnosis: 'Audience is too broad; buyers cannot self-identify quickly.',
+        fix: 'Replace with one core ICP line (e.g. brokerages + property marketing teams).',
+      },
+      {
+        quote: '“Marketing content and photos for modern teams.”',
+        diagnosis: 'Category and promised outcome are vague.',
+        fix: 'Name the exact service + measurable result in the hero.',
+      },
+      {
+        quote: 'No clear offer doors between buyers and photographers.',
+        diagnosis: 'Visitors lose momentum because paths are mixed.',
+        fix: 'Split entry paths with two explicit CTAs above the fold.',
+      },
+    ],
+    recommendations: [
+      'Rewrite the hero into a 10-second answer: what this is, who it is for, and the immediate business outcome.',
+      'Replace generic founder phrases with concrete anchors: category, audience, use case, and alternative replaced.',
+      'Add missing essential sections in this order: Hero, Differentiation, Demo, Trust, Offer Doors, Resources, Closing CTA.',
+      'For complex service sales, include a clear qualification path and expectation-setting CTA (diagnostic call, fit criteria, timeline).',
+    ],
+    taggedRecommendations: [
+      {
+        text: 'Rewrite hero with category + ICP + measurable outcome.',
+        impact: 'high',
+        effort: 'medium',
+        window: '30-day',
+        tier: 1,
+        recommendedFor: ['diy', 'dwy', 'dfy'],
+      },
+      {
+        text: 'Split buyer vs photographer offer doors in the top fold.',
+        impact: 'high',
+        effort: 'medium',
+        window: '30-day',
+        tier: 1,
+        recommendedFor: ['diy', 'dwy', 'dfy'],
+      },
+      {
+        text: 'Add structured proof section with named clients + outcomes.',
+        impact: 'high',
+        effort: 'high',
+        window: '60-day',
+        tier: 2,
+        recommendedFor: ['dwy', 'dfy'],
+      },
+      {
+        text: 'Refactor full homepage architecture with segment-specific variants.',
+        impact: 'medium',
+        effort: 'high',
+        window: '90-day',
+        tier: 3,
+        recommendedFor: ['dfy'],
+      },
+    ],
+  },
 };

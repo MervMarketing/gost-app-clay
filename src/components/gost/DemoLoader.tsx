@@ -87,13 +87,13 @@ export function DemoLoader({ onComplete }: DemoLoaderProps) {
         {/* Header */}
         <div className="text-center mb-10">
           <p className="text-sm text-muted-foreground animate-fade-in mb-2">
-            Loading example plan
+            Loading guided demo
           </p>
           <h2 className="text-2xl font-bold text-foreground animate-fade-in">
-            ACME Corp 90-Day Growth Plan
+            Fotofetch Growth + CLG Playbook
           </h2>
           <p className="mt-3 text-sm text-muted-foreground/80 animate-fade-in">
-            See how a real execution plan comes together
+            Includes tiered DIY / DWY / DFY recommendations
           </p>
         </div>
 
