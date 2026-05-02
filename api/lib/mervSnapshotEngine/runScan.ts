@@ -5,8 +5,8 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import * as cheerio from 'cheerio';
-import { CLAUDE_SCAN_MODEL, SCORING_SYSTEM_PROMPT } from './scoringPrompt';
-import type { MervEngineScanResult } from './types';
+import { CLAUDE_SCAN_MODEL, SCORING_SYSTEM_PROMPT } from './scoringPrompt.js';
+import type { MervEngineScanResult } from './types.js';
 
 const FETCH_TIMEOUT_MS = 12_000;
 const ANTHROPIC_TIMEOUT_MS = 35_000;

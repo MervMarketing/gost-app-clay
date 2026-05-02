@@ -1,14 +1,21 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { runMervHomepageScan, ScanHttpError } from './lib/mervSnapshotEngine/runScan';
+import { runMervHomepageScan, ScanHttpError } from './lib/mervSnapshotEngine/runScan.js';
+
+function readErrorCause(e: unknown): unknown {
+  if (e && typeof e === 'object' && 'cause' in e) {
+    return (e as { cause: unknown }).cause;
+  }
+  return undefined;
+}
 
 function formatUpstreamError(err: unknown): string {
   if (!(err instanceof Error)) return String(err);
   const parts: string[] = [err.message];
-  let c: unknown = err.cause;
+  let c: unknown = readErrorCause(err);
   for (let depth = 0; c != null && depth < 5; depth++) {
     if (c instanceof Error) {
       parts.push(c.message);
-      c = c.cause;
+      c = readErrorCause(c);
     } else if (typeof c === 'object' && c !== null) {
       const o = c as Record<string, unknown>;
       if (o.code != null) parts.push(`code ${o.code}`);

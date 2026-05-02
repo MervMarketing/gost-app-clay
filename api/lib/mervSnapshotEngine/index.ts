@@ -11,6 +11,6 @@
  * Do **not** import this module from React client code (bundle size + secret leakage risk).
  */
 
-export { CLAUDE_SCAN_MODEL, SCORING_SYSTEM_PROMPT } from './scoringPrompt';
-export type { MervEngineScanIssue, MervEngineDimensionScores, MervEngineScanResult } from './types';
-export { normalizeHomepageUrl, runMervHomepageScan, ScanHttpError } from './runScan';
+export { CLAUDE_SCAN_MODEL, SCORING_SYSTEM_PROMPT } from './scoringPrompt.js';
+export type { MervEngineScanIssue, MervEngineDimensionScores, MervEngineScanResult } from './types.js';
+export { normalizeHomepageUrl, runMervHomepageScan, ScanHttpError } from './runScan.js';
