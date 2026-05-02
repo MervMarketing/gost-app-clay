@@ -32,6 +32,7 @@ import {
   rebalanceChannelPcts,
   DEFAULT_TOOLTIPS,
 } from '@/lib/reverseFunnelMath';
+import { ReverseFunnelResultsVisual } from '@/components/tools/ReverseFunnelResultsVisual';
 import { ArrowRight, Info, Sparkles } from 'lucide-react';
 
 function Tip({ text }: { text: string }) {
@@ -52,17 +53,6 @@ function Tip({ text }: { text: string }) {
     </Tooltip>
   );
 }
-
-const fmtInt = (n: number) =>
-  Number.isFinite(n) ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(n)) : '—';
-
-const fmtMonths = (low: number, high: number) => {
-  if (!Number.isFinite(low) || !Number.isFinite(high)) return '—';
-  const a = Math.min(low, high);
-  const b = Math.max(low, high);
-  if (a === b) return `${a.toFixed(1)} mo`;
-  return `${a.toFixed(1)}–${b.toFixed(1)} mo`;
-};
 
 export interface ReverseFunnelToolProps {
   /** When true, tighter copy and “Apply to this plan” instead of only project creation. */
@@ -358,88 +348,19 @@ export function ReverseFunnelTool({
         </Card>
 
         <div className="space-y-4">
-          <Card className="border-border/80">
-            <CardHeader className="pb-2">
-              <CardTitle className="font-display text-lg">The math</CardTitle>
-              <CardDescription>Thinking aid—not a forecast. Numbers round for display.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {!result ? (
-                <p className="text-sm text-muted-foreground">Check inputs—rates must be positive.</p>
-              ) : (
-                <>
-                  <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                    <p className="text-xs text-muted-foreground">LTV target (rough)</p>
-                    <p className="font-display text-2xl font-semibold tabular-nums">
-                      {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
-                        result.totalLtv,
-                      )}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cascade</p>
-                    <ul className="space-y-2">
-                      {result.cascade.map((row) => (
-                        <li
-                          key={row.label}
-                          className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg border border-border/60 bg-background/80 px-3 py-2 text-sm"
-                        >
-                          <span className="text-muted-foreground">
-                            {row.label}
-                            <span className="ml-1 text-[0.65rem]">({row.rateLabel})</span>
-                          </span>
-                          <span className="font-mono text-xs tabular-nums text-foreground">
-                            {fmtInt(row.count)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-                      <p className="text-xs font-medium text-destructive">Visitors needed (today’s rates)</p>
-                      <p className="mt-1 font-mono text-xl font-semibold tabular-nums">
-                        {fmtInt(result.totalVisitors)}
-                      </p>
-                    </div>
-                    <div className="rounded-xl border border-emerald-600/30 bg-emerald-600/5 p-3">
-                      <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                        With sharper positioning
-                      </p>
-                      <p className="mt-1 font-mono text-xl font-semibold tabular-nums">
-                        {fmtInt(result.totalVisitorsSharp)}
-                      </p>
-                      <div className="mt-2 flex items-center gap-1 text-[0.65rem] text-muted-foreground">
-                        <Tip text={DEFAULT_TOOLTIPS.compression} />
-                        <span>
-                          ≈{result.compressionFactor.toFixed(1)}× fewer visitors at the top
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-border/70 bg-muted/15 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Months of effort (channel mix)
-                    </p>
-                    <p className="mt-2 text-sm text-foreground">
-                      <span className="font-medium text-emerald-700 dark:text-emerald-400">Sharper positioning: </span>
-                      {fmtMonths(result.monthsRangeAtChannelsSharp.low, result.monthsRangeAtChannelsSharp.high)}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      <span className="font-medium">Fuzzier positioning: </span>
-                      {fmtMonths(result.monthsRangeAtChannels.low, result.monthsRangeAtChannels.high)}
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Wider gap usually means positioning is the lever you have not pulled yet.
-                    </p>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <div className="rounded-2xl border border-border/80 bg-background/50 p-4 sm:p-6">
+            <div className="mb-6 flex flex-col gap-1 border-b border-border/60 pb-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="font-display text-lg font-semibold text-foreground">The picture</h2>
+                <p className="text-sm text-muted-foreground">Model, not a forecast—same spirit as the $3K scenario poster.</p>
+              </div>
+            </div>
+            {!result ? (
+              <p className="text-sm text-muted-foreground">Check inputs—rates must be positive.</p>
+            ) : (
+              <ReverseFunnelResultsVisual result={result} inputs={debounced} />
+            )}
+          </div>
 
           <Card className="border-primary/25 bg-primary/5">
             <CardContent className="pt-6">
