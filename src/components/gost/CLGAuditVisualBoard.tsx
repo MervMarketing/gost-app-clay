@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { CLGAuditResult, CLGRecommendation } from '@/types/gost';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,10 +6,12 @@ import { cn } from '@/lib/utils';
 import { publicBandLabel } from '@/lib/clgAudit';
 import {
   RUBRIC_DIMENSION_UI,
+  bucketIssuesBySection,
   buildCriteriaRailItems,
   dimensionFromIssue,
   partitionRecommendationsForRail,
   truncateNote,
+  type IllustrativeSectionId,
   type RubricDimension,
 } from '@/lib/clgAuditVisual';
 import { CLGAuditIllustrativePage } from '@/components/gost/CLGAuditIllustrativePage';
@@ -53,6 +55,8 @@ export function CLGAuditVisualBoard({
   visibleRecommendations,
   className,
 }: CLGAuditVisualBoardProps) {
+  const [hoveredSectionId, setHoveredSectionId] = useState<IllustrativeSectionId | null>(null);
+
   const criteriaItems = useMemo(() => {
     if (result) return buildCriteriaRailItems(result);
     return (['A', 'B', 'C', 'D'] as RubricDimension[]).map((dimension) => ({
@@ -67,7 +71,11 @@ export function CLGAuditVisualBoard({
   );
 
   const sectionsPresent = result?.input.sectionsPresent ?? [];
-  const seed = result?.runAt ?? (homepageUrl || 'seed');
+
+  const issuesBySection = useMemo(() => {
+    if (!result?.topIssues.length) return null;
+    return bucketIssuesBySection(result.topIssues);
+  }, [result]);
 
   const score = result?.score.total ?? null;
   const scoreHue = score != null && score >= 65 ? 'text-success' : 'text-destructive';
@@ -162,28 +170,56 @@ export function CLGAuditVisualBoard({
         <div className="relative min-h-[280px] flex-1 bg-muted/15">
           <DotGrid />
           <div className="relative mx-auto max-h-[min(72vh,900px)] overflow-y-auto">
-            <CLGAuditIllustrativePage result={result} seed={seed} />
+            <CLGAuditIllustrativePage
+              result={result}
+              hoveredSectionId={hoveredSectionId}
+              onHoveredSectionChange={setHoveredSectionId}
+            />
           </div>
         </div>
 
         {/* Right rail — problems & moves */}
-        <aside className="flex shrink-0 flex-col gap-3 border-t border-border/50 p-3 xl:w-[13.5rem] xl:border-l xl:border-t-0">
+        <aside className="flex shrink-0 flex-col gap-3 border-t border-border/50 p-3 xl:w-[15rem] xl:border-l xl:border-t-0">
           {result && result.topIssues.length > 0 ? (
             <div>
-              <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-destructive">Friction</p>
-              <div className="flex flex-col gap-1.5">
-                {result.topIssues.map((issue, i) => {
-                  const dim = dimensionFromIssue(issue) as RubricDimension | null;
-                  const chip = dim ? RUBRIC_DIMENSION_UI[dim].chipClass : 'bg-muted text-foreground border-border';
-                  return (
-                    <div
-                      key={`p-${issue.quote}-${i}`}
-                      className={cn('rounded-md border px-2 py-1.5 text-[0.7rem] leading-snug', chip)}
-                    >
-                      {truncateNote(issue.diagnosis || issue.quote, 110)}
-                    </div>
-                  );
-                })}
+              <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-wider text-destructive">
+                {hoveredSectionId ? `${SECTION_LABELS[hoveredSectionId] ?? hoveredSectionId} · notes` : 'Friction'}
+              </p>
+              {hoveredSectionId ? (
+                <p className="mb-2 text-[0.6rem] leading-snug text-muted-foreground">
+                  Mapped here by rubric. Hover elsewhere on the map to switch sections, or move off the map for the full
+                  list.
+                </p>
+              ) : null}
+              <div
+                key={hoveredSectionId ?? '__all__'}
+                className="flex flex-col gap-1.5 animate-in fade-in-0 slide-in-from-right-2 duration-200"
+              >
+                {(() => {
+                  const focused = hoveredSectionId && issuesBySection ? issuesBySection[hoveredSectionId] : null;
+                  const list = focused ?? result.topIssues;
+                  if (focused && focused.length === 0) {
+                    return (
+                      <p className="rounded-md border border-dashed border-border/80 bg-muted/20 px-2 py-2 text-[0.7rem] leading-snug text-muted-foreground">
+                        No friction notes mapped to this section. Try another block or view the full list (move the
+                        pointer off the map).
+                      </p>
+                    );
+                  }
+                  return list.map((issue, i) => {
+                    const dim = dimensionFromIssue(issue) as RubricDimension | null;
+                    const chip = dim ? RUBRIC_DIMENSION_UI[dim].chipClass : 'bg-muted text-foreground border-border';
+                    const cap = hoveredSectionId ? 220 : 110;
+                    return (
+                      <div
+                        key={`p-${issue.quote}-${i}-${hoveredSectionId ?? 'all'}`}
+                        className={cn('rounded-md border px-2 py-1.5 text-[0.7rem] leading-snug', chip)}
+                      >
+                        {truncateNote(issue.diagnosis || issue.quote, cap)}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
           ) : null}
