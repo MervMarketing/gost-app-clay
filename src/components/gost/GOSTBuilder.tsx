@@ -697,6 +697,13 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'builder' | 'repository' | 'audit')} className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <TabsList className="w-full sm:w-auto">
+              {showAuditTab && (
+                <TabsTrigger value="audit" className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-xs sm:text-sm">
+                  <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="sm:hidden">Audit</span>
+                  <span className="hidden sm:inline">Homepage audit</span>
+                </TabsTrigger>
+              )}
               <TabsTrigger value="builder" className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-xs sm:text-sm">
                 <PlayCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="sm:inline">Active Plan</span>
@@ -710,13 +717,6 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
                       {data.repository.filter(i => i.status === 'backlog' || i.status === 'queued').length}
                     </span>
                   )}
-                </TabsTrigger>
-              )}
-              {showAuditTab && (
-                <TabsTrigger value="audit" className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-xs sm:text-sm">
-                  <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span className="sm:hidden">Audit</span>
-                  <span className="hidden sm:inline">Homepage audit</span>
                 </TabsTrigger>
               )}
             </TabsList>
