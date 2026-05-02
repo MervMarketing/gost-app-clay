@@ -3,52 +3,112 @@ import { Target, Compass, ArrowRight, ArrowLeft, X, Sparkles, ClipboardCheck } f
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+export type OnboardingTourVariant = 'demo' | 'project';
+
 interface OnboardingTourProps {
   onComplete: () => void;
   onSkip: () => void;
+  /** `project` = first open of a saved workspace; maps to the real tabs in the header. */
+  variant?: OnboardingTourVariant;
+  projectName?: string;
+  /** When the project already has pyramid data (e.g. template); welcome copy adjusts. */
+  hasPlanContent?: boolean;
 }
 
-const tourSteps = [
+type TourStep = (typeof demoTourSteps)[number];
+
+const demoTourSteps = [
   {
     id: 'welcome',
     icon: Sparkles,
     title: 'Welcome',
     description:
-      'Every plan starts with a CLG homepage audit. Its scores and recommendations shape what you add to the repository and promote into your GOST pyramid.',
-    tip: 'Run the audit first, push recommendations into the repository, then align goal, objectives, strategies, and tactics with that backlog.',
+      'You will move in one line: homepage audit → backlog tactics → active plan. Same flow whether you use the demo or your own project.',
+    tip: 'After this tour, open the Homepage audit tab, run Quick estimate, then add recommendations to All Tactics.',
   },
   {
     id: 'clg-audit',
     icon: ClipboardCheck,
-    title: 'Step 1: CLG Audit (start here)',
-    layerLabel: 'Starting point',
+    title: '1 · Homepage audit tab',
+    layerLabel: 'Start here',
     description:
-      'Capture how your homepage reads today. You get tiered recommendations (DIY / DWY / DFY) grounded in clarity, positioning, structure, and conversion.',
-    tip: 'Add visible recommendations to the repository, then promote the ones that belong in your active plan. Tier 1 + DIY is the default “small start.”',
+      'Rate how clearly your homepage explains what you do, for whom, and why it wins. You get practical fixes sorted by impact and effort.',
+    tip: 'Use Quick estimate for an instant pass; live scan is optional if your team connects it.',
   },
   {
     id: 'goal',
     icon: Target,
-    title: 'Step 2: Goal + Objectives',
-    layerLabel: 'Layer 1 of 3',
+    title: '2 · Active Plan tab',
+    layerLabel: 'Pyramid',
     description:
-      'Set your 90-day goal and measurable objectives so they reflect what the audit exposed — not generic placeholders.',
-    tip: 'If the audit flagged a conversion gap, make sure at least one objective names the metric you are trying to move.',
+      'Set your execution goal, objectives, strategies, and the tactics you are running now. Keep the language tied to what the audit surfaced.',
+    tip: 'If the audit flagged a weak CTA, at least one objective should name the conversion you are trying to move.',
   },
   {
     id: 'strategies',
     icon: Compass,
-    title: 'Step 3: Strategies + Tactics',
-    layerLabel: 'Layer 2–3 of 3',
+    title: '3 · All Tactics tab',
+    layerLabel: 'Backlog',
     description:
-      'Strategies and tactics should ladder up from the same story the audit is telling. Pull from repository items you already prioritized.',
-    tip: 'If a tactic cannot be assigned and dated, rewrite it until it can — or leave it in the repository until it is concrete enough.',
+      'Ideas and queued work live here until you promote them. Send audit rows here in one click, then choose what graduates to the active plan.',
+    tip: 'If a tactic is not concrete enough to schedule, leave it here until it is.',
   },
 ];
 
-export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
+function getProjectTourSteps(projectName: string, hasPlanContent: boolean): typeof demoTourSteps {
+  const name = projectName?.trim() || 'this project';
+  return [
+    {
+      id: 'welcome',
+      icon: Sparkles,
+      title: `Welcome — ${name}`,
+      description: hasPlanContent
+        ? 'This project already has plan data. The workflow is the same: use the homepage audit to sharpen the story, park ideas in All Tactics, and keep Active Plan aligned with what you are actually executing.'
+        : 'Start by auditing your homepage, parking ideas under All Tactics, then shaping the pyramid on Active Plan.',
+      tip: 'The three tabs across the top are the whole workflow: Homepage audit → All Tactics → Active Plan.',
+    },
+    {
+      id: 'clg-audit',
+      icon: ClipboardCheck,
+      title: '1 · Homepage audit',
+      layerLabel: 'You are here',
+      description:
+        'Paste your site URL. Quick estimate runs in the browser; live scan needs your team to wire the scanner (optional).',
+      tip: 'After you see results, use “Add … to repository” to send fixes into All Tactics.',
+    },
+    {
+      id: 'goal',
+      icon: Target,
+      title: '2 · Active Plan',
+      layerLabel: 'Next',
+      description:
+        'Goal, objectives, strategies, and promoted tactics describe what you are actually executing this cycle.',
+      tip: 'Promote only tactics that are specific enough to own and measure.',
+    },
+    {
+      id: 'strategies',
+      icon: Compass,
+      title: '3 · All Tactics',
+      layerLabel: 'Parking lot',
+      description:
+        'Backlog and queued ideas stay here until you promote them. Keeps the active plan honest.',
+      tip: 'Use views like “Fix first” when you need to clean up links before you promote.',
+    },
+  ];
+}
+
+export function OnboardingTour({
+  onComplete,
+  onSkip,
+  variant = 'demo',
+  projectName = '',
+  hasPlanContent = false,
+}: OnboardingTourProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+
+  const tourSteps: TourStep[] =
+    variant === 'project' ? getProjectTourSteps(projectName, hasPlanContent) : demoTourSteps;
 
   const step = tourSteps[currentStep];
   const Icon = step.icon;
@@ -85,7 +145,7 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep]);
+  }, [currentStep, onSkip]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -190,7 +250,7 @@ export function OnboardingTour({ onComplete, onSkip }: OnboardingTourProps) {
             <Button onClick={handleNext} className="gap-2">
               {isLast ? (
                 <>
-                  Start Exploring
+                  {variant === 'project' ? 'Go to audit' : 'Start exploring'}
                   <Sparkles className="h-4 w-4" />
                 </>
               ) : (

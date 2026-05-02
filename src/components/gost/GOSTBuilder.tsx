@@ -74,6 +74,7 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
   const [showDemoLoader, setShowDemoLoader] = useState(false);
   const [showSampleBanner, setShowSampleBanner] = useState(false);
   const [showOnboardingTour, setShowOnboardingTour] = useState(false);
+  const [showProjectOnboarding, setShowProjectOnboarding] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [showFullScreen, setShowFullScreen] = useState(false);
   const [showSharedIntro, setShowSharedIntro] = useState(() => {
@@ -211,10 +212,26 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
   // Check if there's existing plan data
   const hasExistingPlan = Boolean(
     data?.executionGoal?.text?.trim() ||
-    data?.objectives?.length > 0 ||
-    data?.strategies?.length > 0 ||
-    data?.tactics?.length > 0
+      data?.objectives?.length > 0 ||
+      data?.strategies?.length > 0 ||
+      data?.tactics?.length > 0
   );
+
+  // First open of each saved project: guided tour (once per projectId). Skip / complete stores dismissal in localStorage.
+  useEffect(() => {
+    if (!projectId || isViewOnlyProp) return;
+    const key = `gost-project-guided-${projectId}`;
+    if (localStorage.getItem(key)) return;
+    setShowProjectOnboarding(true);
+  }, [projectId, isViewOnlyProp]);
+
+  const dismissProjectOnboarding = useCallback(() => {
+    if (projectId) {
+      localStorage.setItem(`gost-project-guided-${projectId}`, '1');
+    }
+    setShowProjectOnboarding(false);
+    setActiveTab(hasExistingPlan ? 'builder' : 'audit');
+  }, [projectId, hasExistingPlan]);
 
   // Handler for import button click - shows confirmation if plan exists
   const handleImportClick = () => {
@@ -382,9 +399,15 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
   return (
     <>
       {showOnboardingTour && (
-        <OnboardingTour 
-          onComplete={handleOnboardingComplete}
-          onSkip={handleOnboardingSkip}
+        <OnboardingTour variant="demo" onComplete={handleOnboardingComplete} onSkip={handleOnboardingSkip} />
+      )}
+      {showProjectOnboarding && (
+        <OnboardingTour
+          variant="project"
+          projectName={projectName}
+          hasPlanContent={hasExistingPlan}
+          onComplete={dismissProjectOnboarding}
+          onSkip={dismissProjectOnboarding}
         />
       )}
       {showFullScreen && (
@@ -692,7 +715,8 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
               {showAuditTab && (
                 <TabsTrigger value="audit" className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-xs sm:text-sm">
                   <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span className="sm:inline">CLG Audit</span>
+                  <span className="sm:hidden">Audit</span>
+                  <span className="hidden sm:inline">Homepage audit</span>
                 </TabsTrigger>
               )}
             </TabsList>

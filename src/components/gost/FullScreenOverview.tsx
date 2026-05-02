@@ -2,6 +2,7 @@ import { X, Target, TrendingUp, Lightbulb, CheckSquare, Play, CheckCircle2, Cloc
 import { GOSTData, TacticStatus } from '@/types/gost';
 import { cn } from '@/lib/utils';
 import { getObjectiveDisplayName, getStrategyDisplayName, getTacticDisplayName } from '@/lib/gostDisplay';
+import { normalizePlanTimeframe, planTimeframeToPlanTitleShort } from '@/lib/planTimeframe';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -61,7 +62,7 @@ export function FullScreenOverview({ data, onClose }: FullScreenOverviewProps) {
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-semibold">GOST Overview</h1>
           <span className="text-sm text-muted-foreground">
-            {data.timeframe === '90-day' ? '90-Day' : data.timeframe === '6-month' ? '6-Month' : '12-Month'} Plan
+            {planTimeframeToPlanTitleShort(normalizePlanTimeframe(data.timeframe))} Plan
           </span>
           <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">
             {activeTactics} active · {completedTactics} completed · {totalTactics} total

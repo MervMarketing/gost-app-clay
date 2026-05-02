@@ -10,7 +10,7 @@ interface DemoLoaderProps {
 const steps = [
   {
     id: 'clg',
-    activeLabel: 'Loading CLG audit context',
+    activeLabel: 'Loading homepage audit context',
     completeLabel: 'Audit + recommendations ready',
     icon: ClipboardCheck,
     description: 'Homepage signals → tiered DIY / DWY / DFY actions',
@@ -94,13 +94,13 @@ export function DemoLoader({ onComplete }: DemoLoaderProps) {
         {/* Header */}
         <div className="text-center mb-10">
           <p className="text-sm text-muted-foreground animate-fade-in mb-2">
-            Loading guided demo
+            Preparing your walkthrough
           </p>
           <h2 className="text-2xl font-bold text-foreground animate-fade-in">
-            Fotofetch Growth + CLG Playbook
+            Homepage audit → tactics → active plan
           </h2>
           <p className="mt-3 text-sm text-muted-foreground/80 animate-fade-in">
-            Audit-first workflow: recommendations inform the full GOST stack
+            Same path you will use in your own projects: audit, backlog, then promote work to the pyramid.
           </p>
         </div>
 
@@ -219,7 +219,7 @@ export function DemoLoader({ onComplete }: DemoLoaderProps) {
               onClick={onComplete}
               className="w-full gap-2"
             >
-              See How It Works
+              Continue to the demo
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>

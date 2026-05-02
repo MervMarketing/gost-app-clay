@@ -3,6 +3,7 @@ import { GOSTData, ExecutionGoal, Objective, Strategy, Tactic, TacticStatus, Rep
 import { fotofetchPreset } from '@/data/presetFotofetch';
 import { encodeGOSTToURL, decodeGOSTFromURL, SharePermission } from '@/lib/gostSerializer';
 import { getPublicAppOrigin } from '@/lib/appOrigin';
+import { normalizePlanTimeframe, planTimeframeToObjectiveString } from '@/lib/planTimeframe';
 
 interface UseGOSTDataOptions {
   initialData?: GOSTData;
@@ -41,6 +42,7 @@ function getEmptyGOSTData(): GOSTData {
 function normalizeGOSTData(data: GOSTData): GOSTData {
   return {
     ...data,
+    timeframe: normalizePlanTimeframe(data.timeframe),
     tactics: data.tactics.map(tactic => {
       // If a tactic has startedAt but is still "planned", update to "active"
       if (tactic.startedAt && tactic.status === 'planned') {
@@ -136,7 +138,7 @@ export function useGOSTData(options: UseGOSTDataOptions = {}) {
       metricName: '',
       baseline: '',
       target: '',
-      timeframe: data.timeframe === '90-day' ? '90 days' : data.timeframe === '6-month' ? '6 months' : '12 months'
+      timeframe: planTimeframeToObjectiveString(normalizePlanTimeframe(data.timeframe))
     };
     setData(prev => ({
       ...prev,
@@ -147,7 +149,7 @@ export function useGOSTData(options: UseGOSTDataOptions = {}) {
   const bulkAddObjectives = useCallback((metricNames: string[]) => {
     const remaining = 5 - data.objectives.length;
     const toAdd = metricNames.slice(0, remaining);
-    const timeframe = data.timeframe === '90-day' ? '90 days' : data.timeframe === '6-month' ? '6 months' : '12 months';
+    const timeframe = planTimeframeToObjectiveString(normalizePlanTimeframe(data.timeframe));
     
     const newObjectives: Objective[] = toAdd.map((name, index) => ({
       id: `obj-${Date.now()}-${index}`,
@@ -408,7 +410,7 @@ export function useGOSTData(options: UseGOSTDataOptions = {}) {
       metricName: obj.title,
       baseline: '',
       target: '',
-      timeframe: data.timeframe === '90-day' ? '90 days' : data.timeframe === '6-month' ? '6 months' : '12 months'
+      timeframe: planTimeframeToObjectiveString(normalizePlanTimeframe(data.timeframe))
     }));
     
     // Map 1-based index to objective ID
@@ -757,7 +759,7 @@ export function useGOSTData(options: UseGOSTDataOptions = {}) {
           metricName: item.description,
           baseline: '',
           target: '',
-          timeframe: '90 days'
+          timeframe: planTimeframeToObjectiveString(normalizePlanTimeframe(prev.timeframe))
         };
         return {
           ...prev,
@@ -772,7 +774,7 @@ export function useGOSTData(options: UseGOSTDataOptions = {}) {
 
   // Timeframe
   const setTimeframe = useCallback((timeframe: GOSTData['timeframe']) => {
-    setData(prev => ({ ...prev, timeframe }));
+    setData(prev => ({ ...prev, timeframe: normalizePlanTimeframe(timeframe) }));
   }, []);
 
   const updatePlanMeta = useCallback((key: string, value: unknown) => {
@@ -807,7 +809,7 @@ export function useGOSTData(options: UseGOSTDataOptions = {}) {
     if (!newData.repository) {
       newData.repository = [];
     }
-    setData(newData);
+    setData(normalizeGOSTData(newData));
   }, []);
 
   // Generate shareable URL with permission

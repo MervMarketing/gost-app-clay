@@ -186,7 +186,7 @@ export interface GOSTData {
   objectives: Objective[];
   strategies: Strategy[];
   tactics: Tactic[];
-  timeframe: '90-day' | '6-month' | '12-month';
+  timeframe: '1-week' | '2-week' | '90-day' | '6-month' | '12-month';
   repository: RepositoryItem[];
   // Plan-level settings
   pulseFrequency?: PulseFrequency; // Default: 'standard'

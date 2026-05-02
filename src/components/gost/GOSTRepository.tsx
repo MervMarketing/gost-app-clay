@@ -14,12 +14,11 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { 
   Plus, 
   X, 
@@ -322,6 +321,12 @@ function RepositoryTableRow({
 
 type GroupByOption = 'flat' | 'outcome' | 'strategy';
 
+/** What people come here to do — not database statuses. */
+type RepositoryMainView = 'parking' | 'live' | 'triage' | 'done' | 'overview';
+
+/** Optional lens while grooming the parking lot (priority buckets). */
+type ParkingLens = 'everything' | 'quick-wins' | 'phase-2' | 'later';
+
 interface AddItemDialogProps {
   objectives: GOSTData['objectives'];
   onAdd: (item: Omit<RepositoryItem, 'id' | 'createdAt'>) => void;
@@ -549,29 +554,57 @@ export function GOSTRepository({
   onClearFocus,
   onSwitchToActivePlan
 }: GOSTRepositoryProps) {
-  const [filter, setFilter] = useState<'all' | 'backlog' | 'queued' | 'promoted' | 'history' | 'dashboard' | 'orphans' | 'needs-review' | 'quick-wins' | 'phase-2' | 'later'>('promoted');
+  const [mainView, setMainView] = useState<RepositoryMainView>('live');
+  const [parkingLens, setParkingLens] = useState<ParkingLens>('everything');
   const [typeFilter, setTypeFilter] = useState<'all' | RepositoryItemType>('all');
   const [groupBy, setGroupBy] = useState<GroupByOption>('outcome');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [orphanDialogItem, setOrphanDialogItem] = useState<RepositoryItem | null>(null);
   const itemRefs = useRef<Map<string, HTMLElement>>(new Map());
 
-  // Handle focused item - switch to correct filter and scroll
+  const listFilter = useMemo(() => {
+    if (mainView === 'overview') return 'dashboard' as const;
+    if (mainView === 'live') return 'promoted' as const;
+    if (mainView === 'done') return 'history' as const;
+    if (mainView === 'triage') return 'fix-first' as const;
+    if (parkingLens === 'everything') return 'all' as const;
+    return parkingLens;
+  }, [mainView, parkingLens]);
+
+  const viewHelperLine = useMemo(() => {
+    switch (mainView) {
+      case 'overview':
+        return 'Snapshot of flow, risk, and balance across the repository.';
+      case 'parking':
+        if (parkingLens === 'everything') {
+          return 'Backlog and queued ideas — not yet promoted to the active plan.';
+        }
+        return `Showing only ${PRIORITY_BUCKET_CONFIG[parkingLens].label} items.`;
+      case 'live':
+        return 'What is promoted and in motion against your outcomes.';
+      case 'triage':
+        return 'Fix broken links and shaky bets before they clutter the plan.';
+      case 'done':
+        return 'Completed or cut work — for reference and learning.';
+      default:
+        return '';
+    }
+  }, [mainView, parkingLens]);
+
+  // Handle focused item - switch to correct view and scroll
   useEffect(() => {
     if (!focusedItemId) return;
     
     const item = data.repository.find(i => i.id === focusedItemId);
     if (!item) return;
     
-    // Determine which filter shows this item
     if (item.status === 'promoted') {
-      setFilter('promoted');
+      setMainView('live');
     } else if (item.status === 'completed' || item.status === 'cut') {
-      setFilter('history');
-    } else if (item.status === 'queued') {
-      setFilter('queued');
+      setMainView('done');
     } else {
-      setFilter('backlog');
+      setMainView('parking');
+      setParkingLens('everything');
     }
     
     // Scroll to the item after a short delay for filter change to take effect
@@ -592,17 +625,6 @@ export function GOSTRepository({
 
   // Active objective IDs for priority bucket calculation
   const activeObjectiveIds = useMemo(() => new Set(data.objectives.map(o => o.id)), [data.objectives]);
-
-  // Calculate orphan and needs-review counts
-  const orphanItems = useMemo(() => 
-    data.repository.filter(item => 
-      !item.outcomeSupported && 
-      item.status !== 'cut' && 
-      item.status !== 'promoted' &&
-      item.status !== 'completed'
-    ),
-    [data.repository]
-  );
 
   const needsReviewItems = useMemo(() => 
     data.repository.filter(item => {
@@ -637,58 +659,50 @@ export function GOSTRepository({
     return counts;
   }, [data.repository, activeObjectiveIds]);
 
-  const statusCounts = useMemo(() => {
-    let promoted = 0;
-    let queued = 0;
-    let backlog = 0;
-    let history = 0;
-    for (const item of data.repository) {
-      if (item.status === 'promoted') promoted++;
-      else if (item.status === 'queued') queued++;
-      else if (item.status === 'backlog') backlog++;
-      else if (item.status === 'completed' || item.status === 'cut') history++;
-    }
-    return { promoted, queued, backlog, history, pipeline: backlog + queued };
-  }, [data.repository]);
-
   const filteredItems = useMemo(() => {
     return data.repository.filter(item => {
-      // Special filters
-      if (filter === 'orphans') {
+      const f = listFilter;
+
+      if (f === 'fix-first') {
+        if (item.status === 'cut' || item.status === 'promoted' || item.status === 'completed') return false;
+        if (!item.outcomeSupported) return true;
+        if (!data.objectives.some(o => o.id === item.outcomeSupported)) return true;
+        const execWindow = getEffectiveExecutionWindow(item);
+        if (item.abilityToExecute === 'low' && execWindow === '90-day') return true;
+        return false;
+      }
+
+      if (f === 'orphans') {
         return !item.outcomeSupported && 
           item.status !== 'cut' && 
           item.status !== 'promoted' &&
           item.status !== 'completed';
       }
-      if (filter === 'needs-review') {
+      if (f === 'needs-review') {
         if (item.status === 'cut' || item.status === 'promoted' || item.status === 'completed') return false;
         if (!item.outcomeSupported) return true;
         if (!data.objectives.some(o => o.id === item.outcomeSupported)) return true;
-        // Use executionWindow instead of timeHorizon
         const execWindow = getEffectiveExecutionWindow(item);
         if (item.abilityToExecute === 'low' && execWindow === '90-day') return true;
         return false;
       }
       
-      // Priority bucket filters
-      if (filter === 'quick-wins' || filter === 'phase-2' || filter === 'later') {
+      if (f === 'quick-wins' || f === 'phase-2' || f === 'later') {
         if (item.status === 'cut' || item.status === 'promoted' || item.status === 'completed') return false;
         const bucket = derivePriorityBucket(item, activeObjectiveIds);
-        return bucket === filter;
+        return bucket === f;
       }
       
-      // Status filter
       let statusMatch = false;
-      if (filter === 'all') statusMatch = item.status === 'backlog' || item.status === 'queued';
-      else if (filter === 'history') statusMatch = item.status === 'completed' || item.status === 'cut';
-      else statusMatch = item.status === filter;
+      if (f === 'all') statusMatch = item.status === 'backlog' || item.status === 'queued';
+      else if (f === 'history') statusMatch = item.status === 'completed' || item.status === 'cut';
+      else statusMatch = item.status === f;
       
-      // Type filter
       const typeMatch = typeFilter === 'all' || item.type === typeFilter;
       
       return statusMatch && typeMatch;
     });
-  }, [data.repository, data.objectives, filter, typeFilter, activeObjectiveIds]);
+  }, [data.repository, data.objectives, listFilter, typeFilter, activeObjectiveIds]);
 
   // Group items by outcome or strategy
   const groupedItems = useMemo(() => {
@@ -858,7 +872,7 @@ export function GOSTRepository({
     return !item.outcomeSupported;
   };
 
-  const showGroupedView = groupBy !== 'flat' && filter !== 'dashboard';
+  const showGroupedView = groupBy !== 'flat' && listFilter !== 'dashboard';
 
   return (
     <div className="space-y-3 sm:space-y-4">
@@ -878,62 +892,113 @@ export function GOSTRepository({
         </div>
       </div>
 
-      {/* View + grouping: single “Show” menu (status, priority, triage) + compact “Group rows by” */}
+      {/* Views: job-to-be-done modes + parking lens + layout */}
       <div className="-mx-3 px-3 sm:mx-0 sm:px-0">
         <div className="rounded-2xl border border-border/80 bg-card p-3 shadow-subtle">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Show</Label>
-              <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-                <SelectTrigger className="h-11 rounded-xl border-border/80">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Overview</SelectLabel>
-                    <SelectItem value="dashboard">Dashboard</SelectItem>
-                  </SelectGroup>
-                  <SelectGroup>
-                    <SelectLabel>By status</SelectLabel>
-                    <SelectItem value="promoted">Promoted ({statusCounts.promoted})</SelectItem>
-                    <SelectItem value="queued">Queued ({statusCounts.queued})</SelectItem>
-                    <SelectItem value="backlog">Backlog ({statusCounts.backlog})</SelectItem>
-                    <SelectItem value="history">History — done or cut ({statusCounts.history})</SelectItem>
-                    <SelectItem value="all">Active pipeline — backlog + queued ({statusCounts.pipeline})</SelectItem>
-                  </SelectGroup>
-                  <SelectGroup>
-                    <SelectLabel>By priority</SelectLabel>
-                    <SelectItem value="quick-wins">
-                      {PRIORITY_BUCKET_CONFIG['quick-wins'].emoji} Quick wins ({priorityBucketCounts['quick-wins']})
-                    </SelectItem>
-                    <SelectItem value="phase-2">
-                      {PRIORITY_BUCKET_CONFIG['phase-2'].emoji} Phase 2 ({priorityBucketCounts['phase-2']})
-                    </SelectItem>
-                    <SelectItem value="later">
-                      {PRIORITY_BUCKET_CONFIG['later'].emoji} Later ({priorityBucketCounts['later']})
-                    </SelectItem>
-                  </SelectGroup>
-                  <SelectGroup>
-                    <SelectLabel>Needs attention</SelectLabel>
-                    <SelectItem value="orphans">Orphans — no objective ({orphanItems.length})</SelectItem>
-                    <SelectItem value="needs-review">Needs review ({needsReviewItems.length})</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-            {filter !== 'dashboard' && (
-              <div className="w-full space-y-1 sm:w-[14rem] sm:shrink-0">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Group rows by</Label>
-                <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupByOption)}>
-                  <SelectTrigger className="h-11 rounded-xl border-border/80">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="outcome">Outcome (goal)</SelectItem>
-                    <SelectItem value="strategy">Strategy</SelectItem>
-                    <SelectItem value="flat">Flat list</SelectItem>
-                  </SelectContent>
-                </Select>
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70">What are you doing?</Label>
+            <ToggleGroup
+              type="single"
+              value={mainView}
+              onValueChange={(v) => v && setMainView(v as RepositoryMainView)}
+              className="flex flex-wrap justify-start gap-1.5"
+              variant="outline"
+              size="sm"
+            >
+              <ToggleGroupItem value="overview" className="rounded-lg px-2.5 text-xs sm:text-sm">
+                Overview
+              </ToggleGroupItem>
+              <ToggleGroupItem value="parking" className="rounded-lg px-2.5 text-xs sm:text-sm">
+                Parking lot
+              </ToggleGroupItem>
+              <ToggleGroupItem value="live" className="rounded-lg px-2.5 text-xs sm:text-sm">
+                On plan
+              </ToggleGroupItem>
+              <ToggleGroupItem value="triage" className="rounded-lg px-2.5 text-xs sm:text-sm">
+                Fix first
+                {needsReviewItems.length > 0 ? (
+                  <Badge variant="secondary" className="ml-1.5 h-5 min-w-[1.25rem] px-1.5 tabular-nums text-[10px]">
+                    {needsReviewItems.length}
+                  </Badge>
+                ) : null}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="done" className="rounded-lg px-2.5 text-xs sm:text-sm">
+                Done & cut
+              </ToggleGroupItem>
+            </ToggleGroup>
+
+            {mainView === 'parking' && (
+              <div className="flex flex-col gap-1.5 border-t border-border/60 pt-3">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Focus inside parking</Label>
+                <ToggleGroup
+                  type="single"
+                  value={parkingLens}
+                  onValueChange={(v) => v && setParkingLens(v as ParkingLens)}
+                  className="flex flex-wrap justify-start gap-1.5"
+                  variant="outline"
+                  size="sm"
+                >
+                  <ToggleGroupItem value="everything" className="rounded-lg px-2.5 text-xs sm:text-sm">
+                    Everything
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="quick-wins" className="rounded-lg px-2.5 text-xs sm:text-sm">
+                    {PRIORITY_BUCKET_CONFIG['quick-wins'].emoji} Quick wins
+                    <span className="ml-1 tabular-nums text-muted-foreground">({priorityBucketCounts['quick-wins']})</span>
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="phase-2" className="rounded-lg px-2.5 text-xs sm:text-sm">
+                    {PRIORITY_BUCKET_CONFIG['phase-2'].emoji} Phase 2
+                    <span className="ml-1 tabular-nums text-muted-foreground">({priorityBucketCounts['phase-2']})</span>
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="later" className="rounded-lg px-2.5 text-xs sm:text-sm">
+                    {PRIORITY_BUCKET_CONFIG['later'].emoji} Later
+                    <span className="ml-1 tabular-nums text-muted-foreground">({priorityBucketCounts['later']})</span>
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+            )}
+
+            <p className="text-xs leading-snug text-muted-foreground">{viewHelperLine}</p>
+
+            {listFilter !== 'dashboard' && (
+              <div className="flex flex-col gap-2 border-t border-border/60 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                {groupBy === 'strategy' ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Stacked under strategy</span>
+                    <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setGroupBy('outcome')}>
+                      Use goal stacks
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => setGroupBy('flat')}>
+                      Flat list
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Switch
+                      id="stack-under-goals"
+                      checked={groupBy === 'outcome'}
+                      onCheckedChange={(on) => setGroupBy(on ? 'outcome' : 'flat')}
+                    />
+                    <Label htmlFor="stack-under-goals" className="cursor-pointer text-sm font-normal">
+                      Stack under goals
+                    </Label>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-muted-foreground"
+                          aria-label="More layout options"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={() => setGroupBy('strategy')}>Stack under strategy instead</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -941,7 +1006,7 @@ export function GOSTRepository({
       </div>
 
       {/* Dashboard view */}
-      {filter === 'dashboard' && (
+      {listFilter === 'dashboard' && (
         <RepositoryDashboard 
           data={data} 
           onUpdateTactic={onUpdateTactic}
@@ -950,20 +1015,24 @@ export function GOSTRepository({
       )}
 
       {/* Empty state */}
-      {filter !== 'dashboard' && filteredItems.length === 0 && (
+      {listFilter !== 'dashboard' && filteredItems.length === 0 && (
         <div className="rounded-2xl border border-border/80 bg-card py-12 text-center shadow-subtle">
           <Archive className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium text-foreground mb-2">No items found</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            {filter === 'orphans' ? 'All items have outcomes assigned!' : 
-             filter === 'needs-review' ? 'All items are properly configured!' :
-             'Add ideas for future objectives, strategies, and tactics here.'}
+            {listFilter === 'fix-first'
+              ? 'Nothing needs fixing right now — links and review rules look good.'
+              : listFilter === 'orphans'
+                ? 'All items have outcomes assigned.'
+                : listFilter === 'needs-review'
+                  ? 'All visible items are properly configured.'
+                  : 'Add ideas for future objectives, strategies, and tactics here.'}
           </p>
         </div>
       )}
 
       {/* Select all row - only when there are items and not on dashboard */}
-      {filter !== 'dashboard' && filteredItems.length > 0 && (
+      {listFilter !== 'dashboard' && filteredItems.length > 0 && (
         <div 
           className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/80 bg-muted/30 p-3 transition-colors hover:bg-muted/50 md:hidden"
           onClick={() => allVisibleSelected ? clearSelection() : selectAll()}
@@ -987,7 +1056,7 @@ export function GOSTRepository({
       )}
 
       {/* Items - Grouped or Flat */}
-      {filter !== 'dashboard' && filteredItems.length > 0 && (
+      {listFilter !== 'dashboard' && filteredItems.length > 0 && (
         showGroupedView ? (
           <div className="space-y-8">
             {Object.entries(groupedItems).map(([groupKey, items]) => (

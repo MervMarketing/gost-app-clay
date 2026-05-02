@@ -1,6 +1,7 @@
 import { GOSTData, Objective, Strategy, Tactic, TacticStatus, ExecutionGoal, RepositoryItem, ExecutionWindow, TimeHorizon } from '@/types/gost';
 import { fotofetchPreset } from '@/data/presetFotofetch';
 import { getObjectiveDisplayName, getStrategyDisplayName, getTacticDisplayName } from '@/lib/gostDisplay';
+import { normalizePlanTimeframe } from '@/lib/planTimeframe';
 
 /**
  * Convert legacy timeHorizon to executionWindow
@@ -93,6 +94,7 @@ export function decodeGOSTFromURL(encoded: string): DecodedGOSTResult | null {
         }
         return item;
       });
+      data.timeframe = normalizePlanTimeframe(data.timeframe);
       return { data, permission };
     }
     return null;

@@ -4,14 +4,14 @@ import { buildDraftAuditInput, publicBandLabel, runCLGAudit } from '@/lib/clgAud
 import { fetchMervSnapshotScan, scanResultToCLGAuditResult } from '@/lib/clgSnapshot';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { ChevronDown, Globe, ListPlus, Loader2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -86,6 +86,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   const [manualSignals, setManualSignals] = useState(false);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const [offlineBusy, setOfflineBusy] = useState(false);
+  const [technicalOpen, setTechnicalOpen] = useState(false);
 
   const visibleRecommendations = useMemo(() => {
     if (!result) return [];
@@ -105,7 +106,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
 
     const url = form.homepageUrl.trim();
     if (!url) {
-      toast.error('Add a homepage URL first (the “Homepage URL” field above), then run offline baseline.', {
+      toast.error('Add your homepage URL in the field above, then run Quick estimate.', {
         duration: 5000,
       });
       return;
@@ -137,14 +138,14 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
       setResult(next);
       onSaveAudit(next);
 
-      toast.success(`Offline baseline done — score ${next.score.total}/100`, { duration: 4000 });
+      toast.success(`Quick estimate done — score ${next.score.total}/100`, { duration: 4000 });
 
       requestAnimationFrame(() => {
         document.getElementById('clg-audit-result')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       });
     } catch (e) {
       console.error(e);
-      toast.error(e instanceof Error ? e.message : 'Offline baseline failed.');
+      toast.error(e instanceof Error ? e.message : 'Quick estimate failed.');
     } finally {
       setOfflineBusy(false);
     }
@@ -185,7 +186,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
       setForm(next.input);
       setResult(next);
       onSaveAudit(next);
-      toast.success('Live Snapshot complete — scores match the Merv rubric.');
+      toast.success('Live scan complete — your scores and fixes are ready below.');
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Snapshot failed.';
       toast.error(message);
@@ -197,22 +198,59 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
-          <CardTitle className="font-display text-xl">CLG Homepage Audit</CardTitle>
-          <CardDescription className="leading-relaxed">
-            Same methodology as the Merv playbook:{' '}
-            <span className="text-foreground/90">Clarity / Positioning / Structure / Conversion</span> (100 pts) per{' '}
-            <span className="font-medium text-foreground/90">positioning-scoring-rubric-v1</span>.
-            <strong className="font-medium text-foreground">Run live Snapshot</strong> (production) uses this app’s{' '}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">/api/clg-snapshot</code> proxy — set{' '}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">CLG_SNAPSHOT_URL</code> on Vercel (server) to your Snapshot
-            base URL. Local dev: set <code className="rounded bg-muted px-1 py-0.5 text-xs">VITE_CLG_SNAPSHOT_URL</code> or run{' '}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">vercel dev</code>.
-            <strong className="font-medium text-foreground"> Run offline baseline</strong> works without Snapshot.
-            Expand “Refine homepage signals” to paste real quotes or override checks. Then push recommendations into the repository.
-          </CardDescription>
+        <CardHeader className="pb-2">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1.5">
+              <CardTitle className="font-display text-xl">Homepage audit</CardTitle>
+              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                A structured read of your homepage—clarity, positioning, page structure, and conversion signals—scored out of
+                100. Use it to agree on what to fix first, then send those fixes to <strong className="font-medium text-foreground">All Tactics</strong>.
+              </p>
+            </div>
+            <Badge variant="outline" className="shrink-0 font-normal text-muted-foreground">
+              Step 1 · Audit
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-5">
+          <div className="rounded-xl border border-border/70 bg-muted/15 p-4">
+            <p className="mb-3 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+              How this fits your workflow
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                {
+                  Icon: Globe,
+                  title: '1 · Paste your URL',
+                  desc: 'We review your public homepage the way a buyer skims it.',
+                },
+                {
+                  Icon: Sparkles,
+                  title: '2 · Run an audit',
+                  desc: 'Quick estimate runs instantly. Live scan is optional if your team connects it.',
+                },
+                {
+                  Icon: ListPlus,
+                  title: '3 · Push to tactics',
+                  desc: 'Add recommendations to All Tactics, then promote what belongs on Active Plan.',
+                },
+              ].map(({ Icon, title, desc }) => (
+                <div
+                  key={title}
+                  className="flex gap-3 rounded-lg border border-border/60 bg-background/90 p-3 shadow-sm"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="h-4 w-4" aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{title}</p>
+                    <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="clg-homepage-url">Homepage URL</Label>
@@ -334,7 +372,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
                 onClick={() => void runLiveSnapshot()}
               >
                 {snapshotLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Run live Snapshot
+                Live scan
               </Button>
             ) : null}
             <Button
@@ -346,26 +384,46 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
               onClick={runAudit}
             >
               {offlineBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Run offline baseline
+              Quick estimate
             </Button>
           </div>
-          {import.meta.env.PROD ? (
-            <p className="text-xs text-muted-foreground">
-              Production: add <code className="rounded bg-muted px-1">CLG_SNAPSHOT_URL</code> on Vercel (Snapshot base, e.g.{' '}
-              https://snapshot.mervmarketing.com). The app calls it from the server — no CORS setup needed on Snapshot for
-              GOST.
-            </p>
-          ) : !snapshotDevDirectBase ? (
-            <p className="text-xs text-muted-foreground">
-              Local: add <code className="rounded bg-muted px-1">VITE_CLG_SNAPSHOT_URL</code> for a direct scan, or run{' '}
-              <code className="rounded bg-muted px-1">vercel dev</code> to use the proxy.
-            </p>
-          ) : null}
+          <p className="text-xs text-muted-foreground">
+            <strong className="font-medium text-foreground">Quick estimate</strong> works everywhere—good for a fast read.{' '}
+            <strong className="font-medium text-foreground">Live scan</strong> uses a connected scanner for a closer match to
+            the full rubric (your team can enable it in hosting settings).
+          </p>
+
+          <Collapsible open={technicalOpen} onOpenChange={setTechnicalOpen}>
+            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-dashed border-border/80 bg-muted/10 px-4 py-2.5 text-left text-xs font-medium text-muted-foreground hover:bg-muted/25">
+              Hosting setup — live scan (developers)
+              <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', technicalOpen && 'rotate-180')} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-2 border-l-2 border-muted pl-3 pt-3 text-xs text-muted-foreground">
+              {import.meta.env.PROD ? (
+                <p>
+                  Production: set server env <code className="rounded bg-muted px-1 py-0.5">CLG_SNAPSHOT_URL</code> on Vercel
+                  to your Snapshot service origin (example: <code className="rounded bg-muted px-1 py-0.5">https://snapshot.example.com</code>
+                  — no <code className="rounded bg-muted px-1 py-0.5">/api/scan</code> suffix). Redeploy GOST after changing it.
+                </p>
+              ) : !snapshotDevDirectBase ? (
+                <p>
+                  Local: set <code className="rounded bg-muted px-1 py-0.5">VITE_CLG_SNAPSHOT_URL</code> for a direct browser
+                  scan (Snapshot must allow CORS), or run <code className="rounded bg-muted px-1 py-0.5">vercel dev</code> so{' '}
+                  <code className="rounded bg-muted px-1 py-0.5">/api/clg-snapshot</code> proxies like production.
+                </p>
+              ) : (
+                <p>
+                  Local direct URL is set (<code className="rounded bg-muted px-1 py-0.5">VITE_CLG_SNAPSHOT_URL</code>).
+                </p>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
 
           <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
             <Switch id="clg-manual-signals" checked={manualSignals} onCheckedChange={setManualSignals} />
             <Label htmlFor="clg-manual-signals" className="cursor-pointer text-sm font-normal leading-snug">
-              Use my manual scores & checklists (expand refine below, then enable this before re-running)
+              I will enter my own scores and checklists (open “Refine homepage signals” below, then turn this on before
+              re-running)
             </Label>
           </div>
 
