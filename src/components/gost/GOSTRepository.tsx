@@ -14,7 +14,9 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -32,10 +34,6 @@ import {
   CheckCircle2,
   Ban,
   AlertTriangle,
-  List,
-  Rocket,
-  Settings,
-  FlaskConical,
   DollarSign,
   PlayCircle,
   MoreHorizontal,
@@ -65,7 +63,7 @@ import {
 } from '@/components/ui/tooltip';
 import { RepositoryDashboard } from './RepositoryDashboard';
 import { RepositoryItemEditDialog } from './RepositoryItemEditDialog';
-import { BarChart3, Pencil } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { derivePriorityBucket, getEffectiveExecutionWindow, PRIORITY_BUCKET_CONFIG, PriorityBucket } from '@/lib/priorityBuckets';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
@@ -639,6 +637,20 @@ export function GOSTRepository({
     return counts;
   }, [data.repository, activeObjectiveIds]);
 
+  const statusCounts = useMemo(() => {
+    let promoted = 0;
+    let queued = 0;
+    let backlog = 0;
+    let history = 0;
+    for (const item of data.repository) {
+      if (item.status === 'promoted') promoted++;
+      else if (item.status === 'queued') queued++;
+      else if (item.status === 'backlog') backlog++;
+      else if (item.status === 'completed' || item.status === 'cut') history++;
+    }
+    return { promoted, queued, backlog, history, pipeline: backlog + queued };
+  }, [data.repository]);
+
   const filteredItems = useMemo(() => {
     return data.repository.filter(item => {
       // Special filters
@@ -866,156 +878,65 @@ export function GOSTRepository({
         </div>
       </div>
 
-      {/* Compact Filter Toolbar - Scrollable on mobile */}
-      <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-        <div className="flex min-w-max flex-nowrap items-center gap-2 rounded-2xl border border-border/80 bg-card p-2 shadow-subtle sm:min-w-0 sm:flex-wrap sm:gap-4">
-          {/* View section */}
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium px-1 hidden sm:block">View</span>
-            <div className="flex gap-0.5">
-              {[
-                { value: 'dashboard', icon: BarChart3, label: 'Dashboard' },
-                { value: 'promoted', icon: PlayCircle, label: 'Promoted' },
-                { value: 'queued', icon: Clock, label: 'Queued' },
-                { value: 'backlog', icon: Archive, label: 'Backlog' },
-                { value: 'history', icon: CheckCircle2, label: 'History' }
-              ].map(f => {
-                const Icon = f.icon;
-                return (
-                  <Tooltip key={f.value}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={filter === f.value ? 'default' : 'ghost'}
-                        size="sm"
-                        onClick={() => setFilter(f.value as typeof filter)}
-                        className="h-8 w-8 sm:w-auto sm:px-2"
-                      >
-                        {Icon && <Icon className="h-3.5 w-3.5" />}
-                        {!Icon && <span className="text-xs">{f.label}</span>}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>{f.label}</TooltipContent>
-                  </Tooltip>
-                );
-              })}
+      {/* View + grouping: single “Show” menu (status, priority, triage) + compact “Group rows by” */}
+      <div className="-mx-3 px-3 sm:mx-0 sm:px-0">
+        <div className="rounded-2xl border border-border/80 bg-card p-3 shadow-subtle">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1 space-y-1">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Show</Label>
+              <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
+                <SelectTrigger className="h-11 rounded-xl border-border/80">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Overview</SelectLabel>
+                    <SelectItem value="dashboard">Dashboard</SelectItem>
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>By status</SelectLabel>
+                    <SelectItem value="promoted">Promoted ({statusCounts.promoted})</SelectItem>
+                    <SelectItem value="queued">Queued ({statusCounts.queued})</SelectItem>
+                    <SelectItem value="backlog">Backlog ({statusCounts.backlog})</SelectItem>
+                    <SelectItem value="history">History — done or cut ({statusCounts.history})</SelectItem>
+                    <SelectItem value="all">Active pipeline — backlog + queued ({statusCounts.pipeline})</SelectItem>
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>By priority</SelectLabel>
+                    <SelectItem value="quick-wins">
+                      {PRIORITY_BUCKET_CONFIG['quick-wins'].emoji} Quick wins ({priorityBucketCounts['quick-wins']})
+                    </SelectItem>
+                    <SelectItem value="phase-2">
+                      {PRIORITY_BUCKET_CONFIG['phase-2'].emoji} Phase 2 ({priorityBucketCounts['phase-2']})
+                    </SelectItem>
+                    <SelectItem value="later">
+                      {PRIORITY_BUCKET_CONFIG['later'].emoji} Later ({priorityBucketCounts['later']})
+                    </SelectItem>
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>Needs attention</SelectLabel>
+                    <SelectItem value="orphans">Orphans — no objective ({orphanItems.length})</SelectItem>
+                    <SelectItem value="needs-review">Needs review ({needsReviewItems.length})</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
+            {filter !== 'dashboard' && (
+              <div className="w-full space-y-1 sm:w-[14rem] sm:shrink-0">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Group rows by</Label>
+                <Select value={groupBy} onValueChange={(v) => setGroupBy(v as GroupByOption)}>
+                  <SelectTrigger className="h-11 rounded-xl border-border/80">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="outcome">Outcome (goal)</SelectItem>
+                    <SelectItem value="strategy">Strategy</SelectItem>
+                    <SelectItem value="flat">Flat list</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
-          
-          {filter !== 'dashboard' && (
-            <>
-              {/* Separator */}
-              <div className="h-8 sm:h-10 w-px bg-border self-center shrink-0" />
-              
-              {/* Priority section */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium px-1 hidden sm:block">Priority</span>
-                <div className="flex gap-0.5">
-                  {[
-                    { value: 'quick-wins', icon: Rocket, count: priorityBucketCounts['quick-wins'] },
-                    { value: 'phase-2', icon: Settings, count: priorityBucketCounts['phase-2'] },
-                    { value: 'later', icon: FlaskConical, count: priorityBucketCounts['later'] }
-                  ].map(b => {
-                    const Icon = b.icon;
-                    const isActive = filter === b.value;
-                    const config = PRIORITY_BUCKET_CONFIG[b.value as PriorityBucket];
-                    return (
-                      <Tooltip key={b.value}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={isActive ? 'default' : 'ghost'}
-                            size="sm"
-                            onClick={() => setFilter(isActive ? 'all' : b.value as typeof filter)}
-                            className={cn("h-8 gap-1 px-2", !isActive && config.color)}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                            {b.count > 0 && <span className="text-xs">{b.count}</span>}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{PRIORITY_BUCKET_CONFIG[b.value as PriorityBucket].label}</TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
-                </div>
-              </div>
-              
-              {/* Triage section - only show if there are items */}
-              {(orphanItems.length > 0 || needsReviewItems.length > 0) && (
-                <>
-                  {/* Separator */}
-                  <div className="h-8 sm:h-10 w-px bg-border self-center shrink-0" />
-                  
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium px-1 hidden sm:block">Triage</span>
-                    <div className="flex gap-0.5">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={filter === 'orphans' ? 'default' : 'ghost'}
-                            size="sm"
-                            onClick={() => setFilter(filter === 'orphans' ? 'all' : 'orphans')}
-                            className={cn(
-                              "h-8 gap-1 px-2",
-                              orphanItems.length > 0 && filter !== 'orphans' && "text-warning"
-                            )}
-                          >
-                            <AlertTriangle className="h-3.5 w-3.5" />
-                            {orphanItems.length > 0 && <span className="text-xs">{orphanItems.length}</span>}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Orphans (no objective)</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={filter === 'needs-review' ? 'default' : 'ghost'}
-                            size="sm"
-                            onClick={() => setFilter(filter === 'needs-review' ? 'all' : 'needs-review')}
-                            className="h-8 gap-1 px-2"
-                          >
-                            <Clock className="h-3.5 w-3.5" />
-                            {needsReviewItems.length > 0 && <span className="text-xs">{needsReviewItems.length}</span>}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Needs Review</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Separator */}
-              <div className="h-8 sm:h-10 w-px bg-border self-center shrink-0" />
-
-              {/* Group By section */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium px-1 hidden sm:block">Group</span>
-                <div className="flex gap-0.5">
-                  {[
-                    { value: 'outcome', icon: Target, label: 'Group by Outcome' },
-                    { value: 'strategy', icon: Lightbulb, label: 'Group by Strategy' },
-                    { value: 'flat', icon: List, label: 'Flat List' }
-                  ].map(g => {
-                    const Icon = g.icon;
-                    return (
-                      <Tooltip key={g.value}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={groupBy === g.value ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => setGroupBy(g.value as GroupByOption)}
-                            className="h-8 w-8 sm:w-auto sm:px-2"
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>{g.label}</TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
         </div>
       </div>
 
