@@ -178,6 +178,8 @@ export interface CLGAuditResult {
     leakyFunnelHeadline: string;
     scannedUrl: string;
     scannedAt?: string;
+    /** From live scan HTML (og:image / twitter:image). More reliable than third-party full-page thumbnails. */
+    previewImageUrl?: string;
   };
 }
 

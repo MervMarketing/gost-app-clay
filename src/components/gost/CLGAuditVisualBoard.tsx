@@ -112,7 +112,11 @@ export function CLGAuditVisualBoard({
   className,
 }: CLGAuditVisualBoardProps) {
   const [imgFailed, setImgFailed] = useState(false);
-  const previewSrc = useMemo(() => homepagePreviewImageUrl(homepageUrl), [homepageUrl]);
+  const previewSrc = useMemo(() => {
+    const fromScan = result?.snapshotMeta?.previewImageUrl?.trim();
+    if (fromScan) return fromScan;
+    return homepagePreviewImageUrl(homepageUrl);
+  }, [result?.snapshotMeta?.previewImageUrl, homepageUrl]);
 
   useEffect(() => {
     setImgFailed(false);
@@ -231,8 +235,9 @@ export function CLGAuditVisualBoard({
               <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 p-8 text-center">
                 <ImageOff className="h-10 w-10 text-muted-foreground" />
                 <p className="max-w-sm text-sm text-muted-foreground">
-                  Add a full URL to preview the page. If the thumbnail service is blocked, use{' '}
-                  <span className="font-medium text-foreground">Open site</span> or run a live scan for extracted hero copy.
+                  Add a full URL. <span className="font-medium text-foreground">Live scan</span> uses og/twitter images from
+                  the page when available (most reliable). Quick estimate uses a third-party full-page render that can be
+                  blocked—use <span className="font-medium text-foreground">Open site</span> as a fallback.
                 </p>
               </div>
             ) : (

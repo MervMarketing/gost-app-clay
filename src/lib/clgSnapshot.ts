@@ -57,6 +57,7 @@ export interface MervScanResult {
   leaky_funnel_headline: string;
   scanned_url?: string;
   scanned_at?: string;
+  preview_image_url?: string;
 }
 
 function parseLeakFromHeadline(headline: string): number | null {
@@ -169,6 +170,7 @@ export function scanResultToCLGAuditResult(
       leakyFunnelHeadline: scan.leaky_funnel_headline,
       scannedUrl: scan.scanned_url || contextInput.homepageUrl,
       scannedAt: scan.scanned_at,
+      previewImageUrl: scan.preview_image_url?.trim() || undefined,
     },
   };
 }

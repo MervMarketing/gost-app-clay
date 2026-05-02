@@ -62,6 +62,37 @@ async function fetchHomepage(url: string): Promise<string> {
   }
 }
 
+function absolutizeImageUrl(pageUrl: string, href: string): string | null {
+  const t = href.trim();
+  if (!t) return null;
+  try {
+    const u = new URL(t, pageUrl);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** Marketing sites usually expose og:image or twitter:image — no third-party screenshot API. */
+function extractBestPreviewImage(html: string, pageUrl: string): string | null {
+  const $ = cheerio.load(html);
+  const raw: string[] = [];
+  const og = $('meta[property="og:image"]').attr('content')?.trim();
+  if (og) raw.push(og);
+  const ogSecure = $('meta[property="og:image:secure_url"]').attr('content')?.trim();
+  if (ogSecure) raw.push(ogSecure);
+  const tw =
+    $('meta[name="twitter:image"]').attr('content')?.trim() ||
+    $('meta[name="twitter:image:src"]').attr('content')?.trim();
+  if (tw) raw.push(tw);
+  for (const r of raw) {
+    const abs = absolutizeImageUrl(pageUrl, r);
+    if (abs) return abs;
+  }
+  return null;
+}
+
 function extractRelevantCopy(html: string, url: string): ExtractedContent {
   const $ = cheerio.load(html);
 
@@ -202,5 +233,6 @@ export async function runMervHomepageScan(pageUrl: string, apiKey: string): Prom
 
   scan.scanned_url = url;
   scan.scanned_at = new Date().toISOString();
+  scan.preview_image_url = extractBestPreviewImage(html, url) ?? undefined;
   return scan;
 }

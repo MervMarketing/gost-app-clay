@@ -1,6 +1,9 @@
 import type { CLGAuditIssue, CLGAuditResult, CLGRecommendation } from '@/types/gost';
 
-/** Full-page preview image (external service; falls back in UI if broken). */
+/**
+ * Full-page preview via third-party render (no auth). Can be blocked or rate-limited — not guaranteed.
+ * Prefer `snapshotMeta.previewImageUrl` from Live scan (og:image from your own HTML fetch).
+ */
 export function homepagePreviewImageUrl(homepageUrl: string): string | null {
   const raw = homepageUrl.trim();
   if (!raw) return null;

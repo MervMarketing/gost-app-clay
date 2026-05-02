@@ -47,4 +47,6 @@ export interface MervEngineScanResult {
   leaky_funnel_headline: string;
   scanned_url?: string;
   scanned_at?: string;
+  /** Resolved absolute URL from og:image / twitter:image (same HTML fetch as scoring). */
+  preview_image_url?: string;
 }
