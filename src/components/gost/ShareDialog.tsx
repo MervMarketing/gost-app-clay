@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +17,13 @@ import {
 } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { createShareLink, createLiveShareLink, buildShareURL, SharePermission, ShareType } from '@/lib/shareService';
+import {
+  createShareLink,
+  createLiveShareLink,
+  SharePermission,
+  ShareType,
+  CreateShareResult,
+} from '@/lib/shareService';
 import { GOSTData } from '@/types/gost';
 
 interface ShareDialogProps {
@@ -33,28 +39,41 @@ export function ShareDialog({ data, projectId, iconOnly }: ShareDialogProps) {
   const [copied, setCopied] = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  /** Lets us ignore stale async results when permission/type changes quickly */
+  const requestIdRef = useRef(0);
 
   const canUseLiveLink = !!projectId;
 
-  const handleGenerateLink = async () => {
-    setIsGenerating(true);
-    
-    let result;
-    if (shareType === 'live' && projectId) {
-      result = await createLiveShareLink(projectId, permission);
-    } else {
-      result = await createShareLink(data, permission);
+  const applyResult = (result: CreateShareResult) => {
+    if (result.success && result.url) {
+      setGeneratedUrl(result.url);
+      if (result.isLegacyFallback) {
+        toast.warning(
+          'Saved a full link in the URL (short link server unavailable). The link still works when copied.',
+        );
+      }
+      return result.url;
     }
-    
-    setIsGenerating(false);
-    
-    if (result.success && result.shareId) {
-      const url = buildShareURL(result.shareId);
-      setGeneratedUrl(url);
-      return url;
-    } else {
-      toast.error(result.error || 'Failed to create share link');
-      return null;
+    toast.error(result.error || 'Failed to create share link');
+    return null;
+  };
+
+  const handleGenerateLink = async (): Promise<string | null> => {
+    const id = ++requestIdRef.current;
+    setIsGenerating(true);
+    try {
+      let result: CreateShareResult;
+      if (shareType === 'live' && projectId) {
+        result = await createLiveShareLink(projectId, permission);
+      } else {
+        result = await createShareLink(data, permission);
+      }
+      if (id !== requestIdRef.current) return result.success ? result.url ?? null : null;
+      return applyResult(result);
+    } finally {
+      if (id === requestIdRef.current) {
+        setIsGenerating(false);
+      }
     }
   };
 
@@ -71,45 +90,46 @@ export function ShareDialog({ data, projectId, iconOnly }: ShareDialogProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleOpenChange = async (isOpen: boolean) => {
+  const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
     if (isOpen) {
-      // Generate URL when dialog opens
-      await handleGenerateLink();
+      void handleGenerateLink();
     } else {
-      // Reset state when closing
       setCopied(false);
       setGeneratedUrl('');
+      setIsGenerating(false);
+    }
+  };
+
+  const regenerateLink = async (type: ShareType, perm: SharePermission) => {
+    const id = ++requestIdRef.current;
+    setIsGenerating(true);
+    try {
+      let result: CreateShareResult;
+      if (type === 'live' && projectId) {
+        result = await createLiveShareLink(projectId, perm);
+      } else {
+        result = await createShareLink(data, perm);
+      }
+      if (id !== requestIdRef.current) return;
+      applyResult(result);
+    } finally {
+      if (id === requestIdRef.current) {
+        setIsGenerating(false);
+      }
     }
   };
 
   const handlePermissionChange = async (value: SharePermission) => {
     setPermission(value);
-    setGeneratedUrl(''); // Clear old URL
+    setGeneratedUrl('');
     await regenerateLink(shareType, value);
   };
 
   const handleShareTypeChange = async (value: ShareType) => {
     setShareType(value);
-    setGeneratedUrl(''); // Clear old URL
+    setGeneratedUrl('');
     await regenerateLink(value, permission);
-  };
-
-  const regenerateLink = async (type: ShareType, perm: SharePermission) => {
-    setIsGenerating(true);
-    
-    let result;
-    if (type === 'live' && projectId) {
-      result = await createLiveShareLink(projectId, perm);
-    } else {
-      result = await createShareLink(data, perm);
-    }
-    
-    setIsGenerating(false);
-    
-    if (result.success && result.shareId) {
-      setGeneratedUrl(buildShareURL(result.shareId));
-    }
   };
 
   return (
@@ -141,7 +161,7 @@ export function ShareDialog({ data, projectId, iconOnly }: ShareDialogProps) {
               <Label className="text-sm font-medium">Link type</Label>
               <RadioGroup
                 value={shareType}
-                onValueChange={(v) => handleShareTypeChange(v as ShareType)}
+                onValueChange={(v) => void handleShareTypeChange(v as ShareType)}
                 className="grid grid-cols-2 gap-3"
               >
                 <Label
@@ -196,7 +216,7 @@ export function ShareDialog({ data, projectId, iconOnly }: ShareDialogProps) {
             <Label className="text-sm font-medium">Who can access</Label>
             <RadioGroup
               value={permission}
-              onValueChange={(v) => handlePermissionChange(v as SharePermission)}
+              onValueChange={(v) => void handlePermissionChange(v as SharePermission)}
               className="grid grid-cols-2 gap-3"
             >
               <Label
@@ -250,12 +270,14 @@ export function ShareDialog({ data, projectId, iconOnly }: ShareDialogProps) {
             <Label className="text-sm font-medium">Shareable link</Label>
             <div className="flex gap-2">
               <Input
-                value={isGenerating ? 'Generating...' : generatedUrl}
+                value={isGenerating ? 'Generating…' : generatedUrl}
                 readOnly
                 className="flex-1 text-sm bg-muted"
-                placeholder="Generating link..."
+                placeholder={
+                  isGenerating ? undefined : 'Link will appear here — use Copy if empty'
+                }
               />
-              <Button onClick={handleCopy} className="shrink-0" disabled={isGenerating}>
+              <Button onClick={() => void handleCopy()} className="shrink-0" disabled={isGenerating}>
                 {isGenerating ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : copied ? (
