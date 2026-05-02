@@ -1,4 +1,5 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useCountUp } from '@/hooks/useCountUp';
 import type { ReverseFunnelInputs, ReverseFunnelResult } from '@/lib/reverseFunnelMath';
 import { DEFAULT_TOOLTIPS } from '@/lib/reverseFunnelMath';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,27 @@ function Tip({ text }: { text: string }) {
       </TooltipContent>
     </Tooltip>
   );
+}
+
+function CountInt({ value }: { value: number }) {
+  const v = useCountUp(value);
+  return <>{fmtInt(v)}</>;
+}
+
+function CountMoney({ value }: { value: number }) {
+  const v = useCountUp(value);
+  return <>{fmtMoney(Math.round(v))}</>;
+}
+
+function CountFactor({ value }: { value: number }) {
+  const v = useCountUp(value);
+  return <>{Number.isFinite(v) ? v.toFixed(1) : '—'}</>;
+}
+
+function CountMonthsRange({ low, high }: { low: number; high: number }) {
+  const a = useCountUp(low);
+  const b = useCountUp(high);
+  return <>{fmtMonths(a, b)}</>;
 }
 
 interface ReverseFunnelResultsVisualProps {
@@ -73,10 +95,10 @@ export function ReverseFunnelResultsVisual({ result, inputs, className }: Revers
           >
             <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">Your goal</p>
             <p className="mt-1 font-display text-4xl font-bold tabular-nums tracking-tight text-foreground sm:text-5xl">
-              {n}
+              <CountInt value={n} />
             </p>
             <p className="mt-0.5 text-sm font-medium text-muted-foreground">
-              client{n === 1 ? '' : 's'} · LTV ≈ {fmtMoney(result.totalLtv)}
+              client{n === 1 ? '' : 's'} · LTV ≈ <CountMoney value={result.totalLtv} />
             </p>
           </div>
         </div>
@@ -121,7 +143,7 @@ export function ReverseFunnelResultsVisual({ result, inputs, className }: Revers
                       isTop ? 'font-display text-2xl font-semibold sm:text-3xl' : 'font-display text-lg font-semibold sm:text-xl',
                     )}
                   >
-                    {fmtInt(row.count)}
+                    <CountInt value={row.count} />
                   </p>
                 </li>
               );
@@ -138,22 +160,28 @@ export function ReverseFunnelResultsVisual({ result, inputs, className }: Revers
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl border border-border/70 bg-muted/20 px-4 py-4 text-center sm:text-left">
             <p className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">Top of funnel</p>
-            <p className="mt-1 font-display text-2xl font-bold tabular-nums text-foreground">{fmtInt(result.totalVisitors)}</p>
+            <p className="mt-1 font-display text-2xl font-bold tabular-nums text-foreground">
+              <CountInt value={result.totalVisitors} />
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">At today’s rates</p>
           </div>
           <div className="rounded-xl border border-success/30 bg-success-muted/50 px-4 py-4 text-center sm:text-left dark:bg-success-muted/15">
             <p className="text-[0.65rem] font-medium uppercase tracking-wide text-success dark:text-success">
               Sharper positioning
             </p>
-            <p className="mt-1 font-display text-2xl font-bold tabular-nums text-foreground">{fmtInt(result.totalVisitorsSharp)}</p>
+            <p className="mt-1 font-display text-2xl font-bold tabular-nums text-foreground">
+              <CountInt value={result.totalVisitorsSharp} />
+            </p>
             <p className="mt-1 flex items-center justify-center gap-1 text-xs text-muted-foreground sm:justify-start">
               <Tip text={DEFAULT_TOOLTIPS.compression} />
-              ≈{result.compressionFactor.toFixed(1)}× compression
+              ≈<CountFactor value={result.compressionFactor} />× compression
             </p>
           </div>
           <div className="rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-4 text-center sm:text-left">
             <p className="text-[0.65rem] font-medium uppercase tracking-wide text-destructive">Illustrative “gap”</p>
-            <p className="mt-1 font-display text-2xl font-bold tabular-nums text-destructive">{fmtInt(visitorGap)}</p>
+            <p className="mt-1 font-display text-2xl font-bold tabular-nums text-destructive">
+              <CountInt value={visitorGap} />
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">Fewer strangers needed if rates shift (model only)</p>
           </div>
         </div>
@@ -163,7 +191,9 @@ export function ReverseFunnelResultsVisual({ result, inputs, className }: Revers
       <section className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 shadow-sm">
           <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-destructive">Today’s story</p>
-          <p className="mt-3 font-display text-3xl font-bold tabular-nums text-foreground">{fmtInt(result.totalVisitors)}</p>
+          <p className="mt-3 font-display text-3xl font-bold tabular-nums text-foreground">
+            <CountInt value={result.totalVisitors} />
+          </p>
           <p className="mt-2 text-sm text-muted-foreground">
             People who have to encounter you (rough model) before {n} paying client{n === 1 ? '' : 's'} land at{' '}
             {monthly}/mo.
@@ -173,7 +203,9 @@ export function ReverseFunnelResultsVisual({ result, inputs, className }: Revers
           <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-success dark:text-success">
             Same client, calmer top
           </p>
-          <p className="mt-3 font-display text-3xl font-bold tabular-nums text-foreground">{fmtInt(result.totalVisitorsSharp)}</p>
+          <p className="mt-3 font-display text-3xl font-bold tabular-nums text-foreground">
+            <CountInt value={result.totalVisitorsSharp} />
+          </p>
           <p className="mt-2 text-sm text-muted-foreground">
             If visitor-to-lead, bounce, and audience match move like the “sharp” scenario—same goal, less spray at the top.
           </p>
@@ -189,14 +221,17 @@ export function ReverseFunnelResultsVisual({ result, inputs, className }: Revers
           <div>
             <p className="text-xs text-success dark:text-success">Sharper positioning</p>
             <p className="font-display text-xl font-semibold tabular-nums">
-              {fmtMonths(result.monthsRangeAtChannelsSharp.low, result.monthsRangeAtChannelsSharp.high)}
+              <CountMonthsRange
+                low={result.monthsRangeAtChannelsSharp.low}
+                high={result.monthsRangeAtChannelsSharp.high}
+              />
             </p>
           </div>
           <div className="hidden h-8 w-px bg-border/80 sm:block" aria-hidden />
           <div>
             <p className="text-xs text-muted-foreground">Fuzzier positioning</p>
             <p className="font-display text-xl font-semibold tabular-nums text-muted-foreground">
-              {fmtMonths(result.monthsRangeAtChannels.low, result.monthsRangeAtChannels.high)}
+              <CountMonthsRange low={result.monthsRangeAtChannels.low} high={result.monthsRangeAtChannels.high} />
             </p>
           </div>
         </div>
