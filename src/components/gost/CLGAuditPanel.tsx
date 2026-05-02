@@ -85,6 +85,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   /** When false, Run applies an auto baseline; when true, Run keeps your checklist & scores. */
   const [manualSignals, setManualSignals] = useState(false);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [offlineBusy, setOfflineBusy] = useState(false);
 
   const visibleRecommendations = useMemo(() => {
     if (!result) return [];
@@ -100,6 +101,8 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
     list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 
   const runAudit = () => {
+    setSnapshotLoading(false);
+
     const url = form.homepageUrl.trim();
     if (!url) {
       toast.error('Add a homepage URL first (the “Homepage URL” field above), then run offline baseline.', {
@@ -108,29 +111,43 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
       return;
     }
 
-    const draftShell = buildDraftAuditInput({
-      companyName: form.companyName,
-      homepageUrl: url,
-      stage: form.stage,
-      companyType: form.companyType,
-      salesModel: form.salesModel,
-    });
+    setOfflineBusy(true);
+    try {
+      const draftShell = buildDraftAuditInput({
+        companyName: form.companyName,
+        homepageUrl: url,
+        stage: form.stage,
+        companyType: form.companyType,
+        salesModel: form.salesModel,
+      });
 
-    const input: CLGAuditInput = manualSignals
-      ? {
-          ...form,
-          companyName: draftShell.companyName,
-          homepageUrl: draftShell.homepageUrl,
-          stage: draftShell.stage,
-          companyType: draftShell.companyType,
-          salesModel: draftShell.salesModel,
-        }
-      : draftShell;
+      const input: CLGAuditInput = manualSignals
+        ? {
+            ...form,
+            companyName: draftShell.companyName,
+            homepageUrl: draftShell.homepageUrl,
+            stage: draftShell.stage,
+            companyType: draftShell.companyType,
+            salesModel: draftShell.salesModel,
+          }
+        : draftShell;
 
-    setForm(input);
-    const next = runCLGAudit(input);
-    setResult(next);
-    onSaveAudit(next);
+      setForm(input);
+      const next = runCLGAudit(input);
+      setResult(next);
+      onSaveAudit(next);
+
+      toast.success(`Offline baseline done — score ${next.score.total}/100`, { duration: 4000 });
+
+      requestAnimationFrame(() => {
+        document.getElementById('clg-audit-result')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : 'Offline baseline failed.');
+    } finally {
+      setOfflineBusy(false);
+    }
   };
 
   const runLiveSnapshot = async () => {
@@ -203,7 +220,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
                 id="clg-homepage-url"
                 value={form.homepageUrl}
                 onChange={(e) => setForm((prev) => ({ ...prev, homepageUrl: e.target.value }))}
-                placeholder="fotofetch.com or https://example.com"
+                placeholder="Type your URL here, e.g. https://fotofetch.com"
                 className="text-base sm:text-sm"
               />
             </div>
@@ -325,8 +342,10 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
               variant={canRunLiveSnapshot ? 'outline' : 'default'}
               className="w-full sm:flex-1"
               size="lg"
+              disabled={offlineBusy}
               onClick={runAudit}
             >
+              {offlineBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Run offline baseline
             </Button>
           </div>
@@ -513,7 +532,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
       </Card>
 
       {result && (
-        <Card>
+        <Card id="clg-audit-result">
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle className="font-display text-lg">Audit Result</CardTitle>
             <Badge variant={result.score.total >= 65 ? 'secondary' : 'destructive'}>
