@@ -49,6 +49,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { fotofetchPreset } from '@/data/presetFotofetch';
 import type { GOSTData } from '@/types/gost';
 import { Checkbox } from '@/components/ui/checkbox';
+import { isMissingDatabaseTablesError } from '@/lib/supabaseSetupHint';
 
 export default function Projects() {
   const navigate = useNavigate();
@@ -122,7 +123,15 @@ export default function Projects() {
     setSubmitting(false);
     
     if (error) {
-      toast.error(error.message || 'Failed to create workspace');
+      const msg = error.message || 'Failed to create workspace';
+      if (isMissingDatabaseTablesError(msg)) {
+        toast.error(
+          'Your Supabase project has no app tables yet. Open Supabase → SQL Editor for this project and run every file in supabase/migrations (oldest first). Or locally: npx supabase link --project-ref YOUR_REF && npx supabase db push.',
+          { duration: 14_000 },
+        );
+      } else {
+        toast.error(msg);
+      }
     } else {
       toast.success('Workspace created');
       setNewWorkspaceOpen(false);
@@ -147,7 +156,15 @@ export default function Projects() {
     setSubmitting(false);
     
     if (error) {
-      toast.error(error.message || 'Failed to create project');
+      const msg = error.message || 'Failed to create project';
+      if (isMissingDatabaseTablesError(msg)) {
+        toast.error(
+          'Your Supabase project has no app tables yet. Open Supabase → SQL Editor and run all migrations in supabase/migrations (oldest first), or: npx supabase link && npx supabase db push.',
+          { duration: 14_000 },
+        );
+      } else {
+        toast.error(msg);
+      }
     } else if (data) {
       toast.success(useFotofetchTemplate ? 'Fotofetch project saved — opening…' : 'Project created');
       setUseFotofetchTemplate(false);
