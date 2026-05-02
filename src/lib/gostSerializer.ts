@@ -250,8 +250,15 @@ export function parseGOSTFromText(text: string): GOSTData | null {
   }
 }
 
+export interface GenerateGOSTTextOptions {
+  /** When false, tactics with status "cut" are omitted. Default: true (include all). */
+  includeCutTactics?: boolean;
+}
+
 // Generate text format for export (matching the export format)
-export function generateGOSTText(data: GOSTData): string {
+export function generateGOSTText(data: GOSTData, options?: GenerateGOSTTextOptions): string {
+  const includeCut = options?.includeCutTactics !== false;
+
   const lines: string[] = [];
   
   lines.push(`GOST Framework (${data.timeframe})`);
@@ -292,7 +299,10 @@ export function generateGOSTText(data: GOSTData): string {
   lines.push('TACTICS');
   lines.push('-'.repeat(20));
   data.strategies.forEach(str => {
-    const tactics = data.tactics.filter(t => t.strategyId === str.id);
+    let tactics = data.tactics.filter(t => t.strategyId === str.id);
+    if (!includeCut) {
+      tactics = tactics.filter(t => t.status !== 'cut');
+    }
     if (tactics.length > 0) {
       lines.push(`${getStrategyDisplayName(str) || '(Unnamed strategy)'}:`);
       tactics.forEach(tac => {
