@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { CLGAuditInput, CLGAuditResult, CLGRecommendation, GOSTData } from '@/types/gost';
-import { buildDraftAuditInput, publicBandLabel, runCLGAudit } from '@/lib/clgAudit';
+import { buildDraftAuditInput, runCLGAudit } from '@/lib/clgAudit';
 import { fetchMervSnapshotScan, scanResultToCLGAuditResult } from '@/lib/clgSnapshot';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { ChevronDown, Loader2 } from 'lucide-react';
+import { CLGAuditVisualBoard } from '@/components/gost/CLGAuditVisualBoard';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -196,23 +197,24 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   };
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1">
-              <CardTitle className="font-display text-xl">Homepage check</CardTitle>
-              <p className="max-w-xl text-sm text-muted-foreground">
-                Paste your URL, run a check, get a score out of 100 and a short fix list—about a minute.
-              </p>
+    <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_1fr] xl:grid-cols-[minmax(0,24rem)_1fr] xl:items-start">
+        <Card className="h-fit border-border/80 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <CardTitle className="font-display text-xl">Homepage check</CardTitle>
+                <p className="max-w-xl text-sm text-muted-foreground">
+                  Paste your URL, run a check, get a score out of 100 and a short fix list—about a minute.
+                </p>
+              </div>
+              <Badge variant="outline" className="shrink-0 font-normal text-muted-foreground">
+                Start here
+              </Badge>
             </div>
-            <Badge variant="outline" className="shrink-0 font-normal text-muted-foreground">
-              Start here
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="space-y-3">
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="clg-homepage-url">Homepage URL</Label>
               <Input
@@ -553,89 +555,57 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {result && (
-        <Card id="clg-audit-result">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="font-display text-lg">Audit Result</CardTitle>
-            <Badge variant={result.score.total >= 65 ? 'secondary' : 'destructive'}>
-              {result.score.total}/100
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">{publicBandLabel(result.band)}</p>
-              {result.snapshotMeta?.leakyFunnelHeadline ? (
-                <p>{result.snapshotMeta.leakyFunnelHeadline}</p>
-              ) : (
-                <p>Estimated leak: ~{result.leakEstimate} buyers per 100 visitors.</p>
-              )}
-              {result.snapshotMeta?.headlineQuote ? (
-                <p className="text-xs">
-                  <span className="font-medium text-foreground">Hero (scanned):</span> {result.snapshotMeta.headlineQuote}
-                </p>
-              ) : null}
-              {result.source === 'merv-snapshot' ? (
-                <Badge variant="outline" className="mt-1 text-[0.65rem]">
-                  Merv CLG Snapshot
-                </Badge>
-              ) : null}
-            </div>
-            <div className="grid gap-2 sm:grid-cols-4">
-              <div className="rounded-lg border border-border/80 p-3 text-xs">Clarity: {result.score.clarity}/30</div>
-              <div className="rounded-lg border border-border/80 p-3 text-xs">Positioning: {result.score.positioning}/30</div>
-              <div className="rounded-lg border border-border/80 p-3 text-xs">Structure: {result.score.structure}/20</div>
-              <div className="rounded-lg border border-border/80 p-3 text-xs">Conversion: {result.score.conversion}/20</div>
-            </div>
-            <div className="space-y-2">
-              {result.topIssues.length > 0 && (
-                <>
-                  <h4 className="text-sm font-semibold">Top 3 Issues</h4>
-                  <ul className="space-y-2">
-                    {result.topIssues.map((issue, idx) => (
-                      <li key={`${issue.quote}-${idx}`} className="rounded-lg border border-border/80 p-3 text-xs">
-                        <div className="mb-2 flex flex-wrap gap-1">
-                          {issue.dimension ? (
-                            <Badge variant="secondary" className="text-[0.65rem]">
-                              Dim {issue.dimension}
-                            </Badge>
-                          ) : null}
-                          {issue.phraseId != null ? (
-                            <Badge variant="outline" className="text-[0.65rem]">
-                              Phrase #{issue.phraseId}
-                            </Badge>
-                          ) : null}
-                        </div>
-                        <p className="text-muted-foreground"><strong>Quote:</strong> {issue.quote}</p>
-                        <p className="mt-1 text-muted-foreground"><strong>Diagnosis:</strong> {issue.diagnosis}</p>
-                        <p className="mt-1 text-muted-foreground"><strong>Fix:</strong> {issue.fix}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold">Recommended next actions</h4>
-              <ul className="space-y-2">
-                {visibleRecommendations.map((item) => (
-                  <li key={item.text} className="rounded-lg border border-border/80 bg-muted/30 p-3 text-xs text-muted-foreground">
-                    <p>{item.text}</p>
-                    <div className="mt-2 flex gap-2">
-                      <Badge variant="secondary">tier: {item.tier}</Badge>
-                      <Badge variant="outline">impact: {item.impact}</Badge>
-                      <Badge variant="outline">effort: {item.effort}</Badge>
-                      <Badge variant="outline">window: {item.window}</Badge>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
           </CardContent>
         </Card>
-      )}
+
+        <div className="min-w-0 space-y-4">
+          <CLGAuditVisualBoard
+            result={result}
+            homepageUrl={form.homepageUrl}
+            visibleRecommendations={visibleRecommendations}
+          />
+          {result ? (
+            <div className="rounded-2xl border border-border/70 bg-muted/20 px-4 py-4 sm:px-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {result.snapshotMeta?.leakyFunnelHeadline ? (
+                    <span>{result.snapshotMeta.leakyFunnelHeadline}</span>
+                  ) : (
+                    <span>Estimated leak: ~{result.leakEstimate} buyers per 100 visitors.</span>
+                  )}
+                </p>
+                {result.source === 'merv-snapshot' ? (
+                  <Badge variant="outline" className="text-[0.65rem]">
+                    Live scan
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[0.65rem]">
+                    Quick estimate
+                  </Badge>
+                )}
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="rounded-lg border border-border/80 bg-card/80 px-2 py-2 text-center text-[0.7rem] tabular-nums">
+                  <span className="text-muted-foreground">Clarity</span>
+                  <p className="font-display font-semibold text-foreground">{result.score.clarity}/30</p>
+                </div>
+                <div className="rounded-lg border border-border/80 bg-card/80 px-2 py-2 text-center text-[0.7rem] tabular-nums">
+                  <span className="text-muted-foreground">Positioning</span>
+                  <p className="font-display font-semibold text-foreground">{result.score.positioning}/30</p>
+                </div>
+                <div className="rounded-lg border border-border/80 bg-card/80 px-2 py-2 text-center text-[0.7rem] tabular-nums">
+                  <span className="text-muted-foreground">Structure</span>
+                  <p className="font-display font-semibold text-foreground">{result.score.structure}/20</p>
+                </div>
+                <div className="rounded-lg border border-border/80 bg-card/80 px-2 py-2 text-center text-[0.7rem] tabular-nums">
+                  <span className="text-muted-foreground">Conversion</span>
+                  <p className="font-display font-semibold text-foreground">{result.score.conversion}/20</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
