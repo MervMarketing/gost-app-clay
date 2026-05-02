@@ -621,6 +621,13 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
         <SampleDataBanner 
           onStartFresh={handleBannerStartFresh}
           onDismiss={() => setShowSampleBanner(false)}
+          onSaveToAccount={() => {
+            if (isAuthenticated) {
+              navigate('/projects?template=fotofetch');
+            } else {
+              navigate('/auth?next=' + encodeURIComponent('/projects?template=fotofetch'));
+            }
+          }}
         />
       )}
 

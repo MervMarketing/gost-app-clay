@@ -89,7 +89,10 @@ export function useAuth() {
 
   /** Uses Supabase Auth → Google (configure provider + redirect URLs in the Supabase dashboard). */
   const signInWithGoogle = async () => {
-    const redirectTo = `${window.location.origin}/`;
+    // Preserve query string on /auth (e.g. ?next=/projects?template=fotofetch) after OAuth callback.
+    const path =
+      window.location.pathname === '/auth' ? `/auth${window.location.search}` : '/';
+    const redirectTo = `${window.location.origin}${path}`;
     return supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo },

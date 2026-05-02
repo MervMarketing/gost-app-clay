@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProjects, Workspace, GostProject } from '@/hooks/useProjects';
 import { UserMenu } from '@/components/gost/UserMenu';
@@ -46,9 +46,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { fotofetchPreset } from '@/data/presetFotofetch';
+import type { GOSTData } from '@/types/gost';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function Projects() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { 
     workspaces, 
@@ -82,6 +86,8 @@ export default function Projects() {
   const [deletingWorkspace, setDeletingWorkspace] = useState<Workspace | null>(null);
   const [deletingProject, setDeletingProject] = useState<GostProject | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [useFotofetchTemplate, setUseFotofetchTemplate] = useState(false);
+  const fotofetchBootstrapRef = useRef(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -89,6 +95,24 @@ export default function Projects() {
       navigate('/auth');
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  // Open "Create project" with Fotofetch preset when arriving from demo (?template=fotofetch).
+  useEffect(() => {
+    if (loading || fotofetchBootstrapRef.current) return;
+    if (searchParams.get('template') !== 'fotofetch') return;
+    if (workspaces.length === 0) return;
+
+    fotofetchBootstrapRef.current = true;
+    setUseFotofetchTemplate(true);
+    setProjectName('Fotofetch');
+    setProjectDesc('Growth plan + CLG tiered example');
+    setSelectedWorkspaceId(workspaces[0].id);
+    setNewProjectOpen(true);
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('template');
+    setSearchParams(next, { replace: true });
+  }, [loading, workspaces, searchParams, setSearchParams]);
 
   const handleCreateWorkspace = async () => {
     if (!workspaceName.trim()) return;
@@ -111,13 +135,22 @@ export default function Projects() {
     if (!projectName.trim() || !selectedWorkspaceId) return;
     
     setSubmitting(true);
-    const { data, error } = await createProject(selectedWorkspaceId, projectName.trim(), projectDesc.trim() || undefined);
+    const initialData: GOSTData | undefined = useFotofetchTemplate
+      ? JSON.parse(JSON.stringify(fotofetchPreset)) as GOSTData
+      : undefined;
+    const { data, error } = await createProject(
+      selectedWorkspaceId,
+      projectName.trim(),
+      projectDesc.trim() || undefined,
+      initialData,
+    );
     setSubmitting(false);
     
     if (error) {
       toast.error('Failed to create project');
     } else if (data) {
-      toast.success('Project created');
+      toast.success(useFotofetchTemplate ? 'Fotofetch project saved — opening…' : 'Project created');
+      setUseFotofetchTemplate(false);
       navigate(`/project/${data.id}`);
     }
   };
@@ -206,10 +239,17 @@ export default function Projects() {
     setEditProjectOpen(true);
   };
 
-  const openNewProject = (workspaceId: string) => {
+  const openNewProject = (workspaceId: string, opts?: { fotofetch?: boolean }) => {
     setSelectedWorkspaceId(workspaceId);
-    setProjectName('');
-    setProjectDesc('');
+    if (opts?.fotofetch) {
+      setUseFotofetchTemplate(true);
+      setProjectName('Fotofetch');
+      setProjectDesc('Growth plan + CLG tiered example');
+    } else {
+      setUseFotofetchTemplate(false);
+      setProjectName('');
+      setProjectDesc('');
+    }
     setNewProjectOpen(true);
   };
 
@@ -287,6 +327,11 @@ export default function Projects() {
 
       {/* Main content */}
       <main className="container max-w-6xl mx-auto px-6 py-8 md:px-10">
+        {workspaces.length === 0 && searchParams.get('template') === 'fotofetch' && (
+          <p className="mb-4 text-sm text-amber-800 dark:text-amber-200/90 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800 rounded-xl px-4 py-3">
+            Create a workspace below first. Then we’ll open the dialog to save the full Fotofetch plan to your account.
+          </p>
+        )}
         {workspaces.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
@@ -303,6 +348,24 @@ export default function Projects() {
           </Card>
         ) : (
           <div className="space-y-6">
+            <Card className="border-dashed border-border/80 bg-muted/15">
+              <CardContent className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-medium text-foreground">Fotofetch example plan</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Save the full demo (goal, objectives, strategies, tactics, CLG audit) as a real project—editable and backed up in your account.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="shrink-0"
+                  onClick={() => openNewProject(workspaces[0].id, { fotofetch: true })}
+                >
+                  Create Fotofetch project
+                </Button>
+              </CardContent>
+            </Card>
             {workspaces.map((workspace) => {
               const workspaceProjects = getProjectsByWorkspace(workspace.id);
               
@@ -456,7 +519,13 @@ export default function Projects() {
       </Dialog>
 
       {/* New Project Dialog */}
-      <Dialog open={newProjectOpen} onOpenChange={setNewProjectOpen}>
+      <Dialog
+        open={newProjectOpen}
+        onOpenChange={(open) => {
+          setNewProjectOpen(open);
+          if (!open) setUseFotofetchTemplate(false);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Project</DialogTitle>
@@ -469,7 +538,7 @@ export default function Projects() {
               <Label htmlFor="project-name">Project Name</Label>
               <Input
                 id="project-name"
-                placeholder="e.g., Q1 2026 Growth Plan"
+                placeholder="e.g., Fotofetch"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
               />
@@ -483,6 +552,20 @@ export default function Projects() {
                 onChange={(e) => setProjectDesc(e.target.value)}
               />
             </div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/80 bg-muted/20 px-3 py-3">
+              <Checkbox
+                id="fotofetch-template"
+                checked={useFotofetchTemplate}
+                onCheckedChange={(v) => setUseFotofetchTemplate(v === true)}
+                className="mt-0.5"
+              />
+              <span className="text-sm leading-snug">
+                <span className="font-medium text-foreground">Load Fotofetch example plan</span>
+                <span className="block text-muted-foreground">
+                  Includes goal, objectives, strategies, tactics, repository samples, and CLG audit—same as the homepage demo.
+                </span>
+              </span>
+            </label>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNewProjectOpen(false)}>

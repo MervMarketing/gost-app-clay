@@ -15,9 +15,11 @@ import {
 interface SampleDataBannerProps {
   onStartFresh: () => void;
   onDismiss: () => void;
+  /** Save the Fotofetch demo into the user’s account as a real project (navigates to auth or projects). */
+  onSaveToAccount?: () => void;
 }
 
-export function SampleDataBanner({ onStartFresh, onDismiss }: SampleDataBannerProps) {
+export function SampleDataBanner({ onStartFresh, onDismiss, onSaveToAccount }: SampleDataBannerProps) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleStartFreshClick = () => {
@@ -48,7 +50,12 @@ export function SampleDataBanner({ onStartFresh, onDismiss }: SampleDataBannerPr
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {onSaveToAccount ? (
+                <Button variant="secondary" size="sm" onClick={onSaveToAccount}>
+                  Save as Fotofetch project
+                </Button>
+              ) : null}
               <Button 
                 variant="default" 
                 size="sm"

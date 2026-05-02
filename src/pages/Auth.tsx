@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ const passwordSchema = z.string().min(6, 'Password must be at least 6 characters
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp, signInWithGoogle, isAuthenticated, loading: authLoading } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
@@ -28,12 +29,16 @@ export default function Auth() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (respect ?next= safe internal path)
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      navigate('/');
+    if (!isAuthenticated || authLoading) return;
+    const next = searchParams.get('next');
+    if (next && next.startsWith('/') && !next.startsWith('//')) {
+      navigate(next);
+      return;
     }
-  }, [isAuthenticated, authLoading, navigate]);
+    navigate('/projects');
+  }, [isAuthenticated, authLoading, navigate, searchParams]);
 
   const validateInputs = () => {
     try {
