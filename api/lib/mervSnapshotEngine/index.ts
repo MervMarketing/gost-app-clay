@@ -1,7 +1,7 @@
 /**
  * Merv CLG homepage scan engine (Node-only).
  *
- * **GOST:** `api/clg-snapshot` calls `runMervHomepageScan` when `ANTHROPIC_API_KEY` is set.
+ * **GOST:** Lives under `api/lib/` so Vercel bundles it with `api/clg-snapshot`. `ANTHROPIC_API_KEY` enables inline scans.
  *
  * **Reuse on mervmarketing.com later:** (pick one)
  * - Deploy a thin API route (Next/Node) that imports `runMervHomepageScan` from a **shared package**

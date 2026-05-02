@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { runMervHomepageScan, ScanHttpError } from '../src/lib/mervSnapshotEngine/runScan';
+import { runMervHomepageScan, ScanHttpError } from './lib/mervSnapshotEngine/runScan';
 
 function formatUpstreamError(err: unknown): string {
   if (!(err instanceof Error)) return String(err);
@@ -32,6 +32,20 @@ function formatUpstreamError(err: unknown): string {
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   res.setHeader('Content-Type', 'application/json');
 
+  try {
+    await handleClgSnapshot(req, res);
+  } catch (e) {
+    console.error('[clg-snapshot]', e);
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Live scan hit an unexpected server error.',
+        detail: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+}
+
+async function handleClgSnapshot(req: VercelRequest, res: VercelResponse): Promise<void> {
   const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
   const upstream = process.env.CLG_SNAPSHOT_URL?.trim();
 

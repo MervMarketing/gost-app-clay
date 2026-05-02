@@ -1,7 +1,7 @@
 /**
  * Client for the Merv CLG live scan: POST same-origin `/api/clg-snapshot` with `{ url }`.
  * Production uses the built-in engine when `ANTHROPIC_API_KEY` is set on Vercel; otherwise may proxy to `CLG_SNAPSHOT_URL`.
- * JSON shape matches `src/lib/mervSnapshotEngine` and `positioning-scoring-rubric-v1.md`.
+ * JSON shape matches `api/lib/mervSnapshotEngine` (server) and `positioning-scoring-rubric-v1.md`.
  */
 
 import type { CLGAuditInput, CLGAuditResult } from '@/types/gost';
@@ -89,10 +89,19 @@ export async function fetchMervSnapshotScan(
 
   const res = await fetch(scanUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({ url: homepageUrl }),
   });
-  const data: unknown = await res.json();
+  const raw = await res.text();
+  let data: unknown;
+  try {
+    data = JSON.parse(raw) as unknown;
+  } catch {
+    const snippet = raw.replace(/\s+/g, ' ').trim().slice(0, 280);
+    throw new Error(
+      `Live scan response was not JSON (${res.status}). ${snippet || 'Empty body'} — check Vercel function logs for /api/clg-snapshot.`,
+    );
+  }
   if (!res.ok) {
     const err = data as { error?: string; detail?: string; hint?: string };
     const parts = [err.error, err.detail, err.hint].filter(Boolean);
