@@ -97,10 +97,11 @@ export function DemoLoader({ onComplete }: DemoLoaderProps) {
             Preparing your walkthrough
           </p>
           <h2 className="text-2xl font-bold text-foreground animate-fade-in">
-            Homepage audit → tactics → active plan
+            Homepage check → ideas → your plan
           </h2>
           <p className="mt-3 text-sm text-muted-foreground/80 animate-fade-in">
-            Same path you will use in your own projects: audit, backlog, then promote work to the pyramid.
+            Same path in your own projects: quick homepage read, park ideas in All Tactics, then run what matters on Active
+            Plan.
           </p>
         </div>
 

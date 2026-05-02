@@ -700,8 +700,8 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
               {showAuditTab && (
                 <TabsTrigger value="audit" className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-xs sm:text-sm">
                   <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span className="sm:hidden">Audit</span>
-                  <span className="hidden sm:inline">Homepage audit</span>
+                  <span className="sm:hidden">Check</span>
+                  <span className="hidden sm:inline">Homepage check</span>
                 </TabsTrigger>
               )}
               <TabsTrigger value="builder" className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-xs sm:text-sm">

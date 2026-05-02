@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { LucideIcon } from 'lucide-react';
 import { Target, Compass, ArrowRight, ArrowLeft, X, Sparkles, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -15,84 +16,85 @@ interface OnboardingTourProps {
   hasPlanContent?: boolean;
 }
 
-type TourStep = (typeof demoTourSteps)[number];
+interface TourStep {
+  id: string;
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  /** Shown only when it adds something the main line does not repeat. */
+  tip?: string;
+  layerLabel?: string;
+}
 
-const demoTourSteps = [
+const demoTourSteps: TourStep[] = [
   {
     id: 'welcome',
     icon: Sparkles,
     title: 'Welcome',
     description:
-      'You will move in one line: homepage audit → backlog tactics → active plan. Same flow whether you use the demo or your own project.',
-    tip: 'After this tour, open the Homepage audit tab, run Quick estimate, then add recommendations to All Tactics.',
+      'You get a simple homepage score and a short fix list—so your team stops debating and starts shipping. Most people finish the first check in under two minutes.',
   },
   {
     id: 'clg-audit',
     icon: ClipboardCheck,
-    title: '1 · Homepage audit tab',
+    title: 'Check your homepage',
     layerLabel: 'Start here',
     description:
-      'Rate how clearly your homepage explains what you do, for whom, and why it wins. You get practical fixes sorted by impact and effort.',
-    tip: 'Use Quick estimate for an instant pass; live scan is optional if your team connects it.',
+      'Paste your site address. Tap Quick estimate for an instant read, or Live scan when your workspace is set up for it.',
   },
   {
     id: 'goal',
     icon: Target,
-    title: '2 · Active Plan tab',
-    layerLabel: 'Pyramid',
+    title: 'Active Plan',
+    layerLabel: 'Where work goes live',
     description:
-      'Set your execution goal, objectives, strategies, and the tactics you are running now. Keep the language tied to what the audit surfaced.',
-    tip: 'If the audit flagged a weak CTA, at least one objective should name the conversion you are trying to move.',
+      'This tab is your real plan for this period—what you are doing now, not someday. Keep it short so everyone knows the priority.',
   },
   {
     id: 'strategies',
     icon: Compass,
-    title: '3 · All Tactics tab',
-    layerLabel: 'Backlog',
+    title: 'All Tactics',
+    layerLabel: 'Ideas on deck',
     description:
-      'Ideas and queued work live here until you promote them. Send audit rows here in one click, then choose what graduates to the active plan.',
-    tip: 'If a tactic is not concrete enough to schedule, leave it here until it is.',
+      'Stash extra ideas here. When one is ready, move it into Active Plan so it actually gets done.',
   },
 ];
 
-function getProjectTourSteps(projectName: string, hasPlanContent: boolean): typeof demoTourSteps {
+function getProjectTourSteps(projectName: string, hasPlanContent: boolean): TourStep[] {
   const name = projectName?.trim() || 'this project';
   return [
     {
       id: 'welcome',
       icon: Sparkles,
-      title: `Welcome — ${name}`,
+      title: `You're in — ${name}`,
       description: hasPlanContent
-        ? 'This project already has plan data. The workflow is the same: use the homepage audit to sharpen the story, park ideas in All Tactics, and keep Active Plan aligned with what you are actually executing.'
-        : 'Start by auditing your homepage, parking ideas under All Tactics, then shaping the pyramid on Active Plan.',
-      tip: 'The three tabs across the top are the whole workflow: Homepage audit → All Tactics → Active Plan.',
+        ? 'This project already has a plan. Add a quick homepage check to sharpen your story—then keep Active Plan and All Tactics in sync with what you are really doing.'
+        : 'You are three tabs away from a clear score, a tidy idea list, and a plan your team can follow. Small steps now save long meetings later.',
     },
     {
       id: 'clg-audit',
       icon: ClipboardCheck,
-      title: '1 · Homepage audit',
+      title: 'Homepage check',
       layerLabel: 'You are here',
       description:
-        'Paste your site URL. Quick estimate runs in the browser; live scan needs your team to wire the scanner (optional).',
-      tip: 'After you see results, use “Add … to repository” to send fixes into All Tactics.',
+        'Paste your URL and run Quick estimate for an instant score. Live scan is optional—use it when your app is connected.',
+      tip: 'After you see results, one click sends fixes to All Tactics.',
     },
     {
       id: 'goal',
       icon: Target,
-      title: '2 · Active Plan',
-      layerLabel: 'Next',
+      title: 'Active Plan',
+      layerLabel: 'Next tab',
       description:
-        'Goal, objectives, strategies, and promoted tactics describe what you are actually executing this cycle.',
-      tip: 'Promote only tactics that are specific enough to own and measure.',
+        'Put the work you are actually running this cycle here—goals and tactics your team can own.',
     },
     {
       id: 'strategies',
       icon: Compass,
-      title: '3 · All Tactics',
-      layerLabel: 'Parking lot',
+      title: 'All Tactics',
+      layerLabel: 'Ideas on deck',
       description:
-        'Backlog and queued ideas stay here until you promote them. Keeps the active plan honest.',
-      tip: 'Use views like “Fix first” when you need to clean up links before you promote.',
+        'Hold future ideas here. Promote only what you are ready to execute so Active Plan stays honest.',
     },
   ];
 }
@@ -226,13 +228,13 @@ export function OnboardingTour({
               {step.description}
             </p>
 
-            {/* Tip box */}
-            <div className="bg-muted/50 rounded-lg p-3 border border-border/50">
-              <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">💡 Tip:</span>{' '}
-                {step.tip}
-              </p>
-            </div>
+            {step.tip ? (
+              <div className="rounded-lg border border-border/50 bg-muted/50 p-3">
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">Tip:</span> {step.tip}
+                </p>
+              </div>
+            ) : null}
           </div>
 
           {/* Navigation */}
@@ -250,7 +252,7 @@ export function OnboardingTour({
             <Button onClick={handleNext} className="gap-2">
               {isLast ? (
                 <>
-                  {variant === 'project' ? 'Go to audit' : 'Start exploring'}
+                  {variant === 'project' ? 'Open homepage check' : "Let's go"}
                   <Sparkles className="h-4 w-4" />
                 </>
               ) : (

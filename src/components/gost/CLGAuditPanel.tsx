@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronDown, Globe, ListPlus, Loader2, Sparkles } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -80,7 +80,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   const [deliveryMode, setDeliveryMode] = useState<'diy' | 'dwy' | 'dfy'>('diy');
   const [planSize, setPlanSize] = useState<'small' | 'standard' | 'full'>('small');
   const [unlockedTier, setUnlockedTier] = useState<1 | 2 | 3>(1);
-  const [contextOpen, setContextOpen] = useState(false);
+  const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
   /** When false, Run applies an auto baseline; when true, Run keeps your checklist & scores. */
   const [manualSignals, setManualSignals] = useState(false);
@@ -198,59 +198,20 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1.5">
-              <CardTitle className="font-display text-xl">Homepage audit</CardTitle>
-              <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                A structured read of your homepage—clarity, positioning, page structure, and conversion signals—scored out of
-                100. Use it to agree on what to fix first, then send those fixes to <strong className="font-medium text-foreground">All Tactics</strong>.
+            <div className="min-w-0 space-y-1">
+              <CardTitle className="font-display text-xl">Homepage check</CardTitle>
+              <p className="max-w-xl text-sm text-muted-foreground">
+                Paste your URL, run a check, get a score out of 100 and a short fix list—about a minute.
               </p>
             </div>
             <Badge variant="outline" className="shrink-0 font-normal text-muted-foreground">
-              Step 1 · Audit
+              Start here
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="rounded-xl border border-border/70 bg-muted/15 p-4">
-            <p className="mb-3 text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
-              How this fits your workflow
-            </p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {[
-                {
-                  Icon: Globe,
-                  title: '1 · Paste your URL',
-                  desc: 'We review your public homepage the way a buyer skims it.',
-                },
-                {
-                  Icon: Sparkles,
-                  title: '2 · Run an audit',
-                  desc: 'Quick estimate runs instantly. Live scan is optional if your team connects it.',
-                },
-                {
-                  Icon: ListPlus,
-                  title: '3 · Push to tactics',
-                  desc: 'Add recommendations to All Tactics, then promote what belongs on Active Plan.',
-                },
-              ].map(({ Icon, title, desc }) => (
-                <div
-                  key={title}
-                  className="flex gap-3 rounded-lg border border-border/60 bg-background/90 p-3 shadow-sm"
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Icon className="h-4 w-4" aria-hidden />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">{title}</p>
-                    <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="space-y-3">
             <div className="space-y-2">
               <Label htmlFor="clg-homepage-url">Homepage URL</Label>
@@ -258,7 +219,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
                 id="clg-homepage-url"
                 value={form.homepageUrl}
                 onChange={(e) => setForm((prev) => ({ ...prev, homepageUrl: e.target.value }))}
-                placeholder="Type your URL here, e.g. https://fotofetch.com"
+                placeholder="https://yoursite.com"
                 className="text-base sm:text-sm"
               />
             </div>
@@ -268,17 +229,49 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
                 id="clg-company"
                 value={form.companyName}
                 onChange={(e) => setForm((prev) => ({ ...prev, companyName: e.target.value }))}
-                placeholder="We infer from the domain if you leave this blank"
+                placeholder="Leave blank and we will guess from the domain"
               />
             </div>
           </div>
 
-          <Collapsible open={contextOpen} onOpenChange={setContextOpen}>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {canRunLiveSnapshot ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:flex-1"
+                size="lg"
+                disabled={snapshotLoading}
+                onClick={() => void runLiveSnapshot()}
+              >
+                {snapshotLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Live scan
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="default"
+              className="w-full sm:flex-1"
+              size="lg"
+              disabled={offlineBusy}
+              onClick={runAudit}
+            >
+              {offlineBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Quick estimate
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Quick estimate</span> runs instantly.{' '}
+            <span className="font-medium text-foreground">Live scan</span> needs your app connected (see developer note
+            below).
+          </p>
+
+          <Collapsible open={moreOptionsOpen} onOpenChange={setMoreOptionsOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border/80 bg-muted/20 px-4 py-3 text-left text-sm font-medium text-foreground hover:bg-muted/40">
-              Company context (optional)
-              <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', contextOpen && 'rotate-180')} />
+              More options
+              <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', moreOptionsOpen && 'rotate-180')} />
             </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-3 pt-4">
+            <CollapsibleContent className="space-y-5 border-t border-border/60 pt-5 mt-2">
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-2">
                   <Label>Stage</Label>
@@ -326,72 +319,188 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                These tune which recommendations appear (e.g. PLG vs complex B2B). Defaults work if you skip this.
+                These shape which suggestions you see. Skip them if you are unsure—defaults work fine.
               </p>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>How you get work done (filters list)</Label>
+                  <select
+                    className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
+                    value={deliveryMode}
+                    onChange={(e) => setDeliveryMode(e.target.value as 'diy' | 'dwy' | 'dfy')}
+                  >
+                    <option value="diy">Mostly in-house (DIY)</option>
+                    <option value="dwy">We like help (done with you)</option>
+                    <option value="dfy">We prefer outsourcing (done for you)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>How big is this plan? (depth of list)</Label>
+                  <select
+                    className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
+                    value={planSize}
+                    onChange={(e) => {
+                      const next = e.target.value as 'small' | 'standard' | 'full';
+                      setPlanSize(next);
+                      setUnlockedTier(1);
+                    }}
+                  >
+                    <option value="small">Small (essentials)</option>
+                    <option value="standard">Standard</option>
+                    <option value="full">Full</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
+                <Switch id="clg-manual-signals" checked={manualSignals} onCheckedChange={setManualSignals} />
+                <Label htmlFor="clg-manual-signals" className="cursor-pointer text-sm font-normal leading-snug">
+                  I will enter my own scores and checklists (open “Refine homepage signals” below, then turn this on before
+                  re-running)
+                </Label>
+              </div>
+
+              <Collapsible open={refineOpen} onOpenChange={setRefineOpen}>
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border/80 bg-muted/20 px-4 py-3 text-left text-sm font-medium text-foreground hover:bg-muted/40">
+                  Refine homepage signals
+                  <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', refineOpen && 'rotate-180')} />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-5 border-t border-border/60 pt-5 mt-2">
+                  <p className="text-xs text-muted-foreground">
+                    Optional: paste real homepage quotes or adjust scores after a human read. Turn on the switch above so the
+                    next run keeps these fields instead of resetting the baseline.
+                  </p>
+
+                  <div className="space-y-3">
+                    <Label>Clarity scoring (0-10 each)</Label>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={10}
+                        value={form.whatIsIt}
+                        onChange={(e) => setForm((prev) => ({ ...prev, whatIsIt: Number(e.target.value) || 0 }))}
+                        placeholder="What is it?"
+                      />
+                      <Input
+                        type="number"
+                        min={0}
+                        max={10}
+                        value={form.whoIsItFor}
+                        onChange={(e) => setForm((prev) => ({ ...prev, whoIsItFor: Number(e.target.value) || 0 }))}
+                        placeholder="Who is it for?"
+                      />
+                      <Input
+                        type="number"
+                        min={0}
+                        max={10}
+                        value={form.whyBetter}
+                        onChange={(e) => setForm((prev) => ({ ...prev, whyBetter: Number(e.target.value) || 0 }))}
+                        placeholder="Why better?"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Founder phrases ({phraseSummary})</Label>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {FOUNDER_PHRASES.map((phrase) => (
+                        <label key={phrase} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
+                          <Checkbox
+                            checked={form.founderPhrases.includes(phrase)}
+                            onCheckedChange={() =>
+                              setForm((prev) => ({ ...prev, founderPhrases: toggleListValue(prev.founderPhrases, phrase) }))
+                            }
+                          />
+                          <span className="text-xs text-muted-foreground">{phrase}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Essential sections present</Label>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {ESSENTIAL_SECTIONS.map((section) => (
+                        <label key={section.id} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
+                          <Checkbox
+                            checked={form.sectionsPresent.includes(section.id)}
+                            onCheckedChange={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                sectionsPresent: toggleListValue(prev.sectionsPresent, section.id),
+                              }))
+                            }
+                          />
+                          <span className="text-xs text-muted-foreground">{section.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Conversion signals</Label>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {[
+                        { key: 'ctaSpecific', label: 'Specific outcome CTA' },
+                        { key: 'socialProofCredible', label: 'Credible social proof' },
+                        { key: 'outcomesFocused', label: 'Outcome-led copy' },
+                        { key: 'customerLanguage', label: 'Customer language over buzzwords' },
+                      ].map((signal) => (
+                        <label key={signal.key} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
+                          <Checkbox
+                            checked={form.conversionSignals[signal.key as keyof CLGAuditInput['conversionSignals']]}
+                            onCheckedChange={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                conversionSignals: {
+                                  ...prev.conversionSignals,
+                                  [signal.key]:
+                                    !prev.conversionSignals[signal.key as keyof CLGAuditInput['conversionSignals']],
+                                },
+                              }))
+                            }
+                          />
+                          <span className="text-xs text-muted-foreground">{signal.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Audit notes</Label>
+                    <Textarea
+                      value={form.notes}
+                      onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+                      placeholder="Key quotes, missing anchors, strongest weakness..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Top quote evidence (optional, 3 snippets)</Label>
+                    <div className="space-y-2">
+                      {[0, 1, 2].map((idx) => (
+                        <Input
+                          key={idx}
+                          value={form.quoteEvidence?.[idx] ?? ''}
+                          onChange={(e) =>
+                            setForm((prev) => {
+                              const next = [...(prev.quoteEvidence ?? ['', '', ''])];
+                              next[idx] = e.target.value;
+                              return { ...prev, quoteEvidence: next };
+                            })
+                          }
+                          placeholder={`Quote ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </CollapsibleContent>
           </Collapsible>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Delivery model (filters list)</Label>
-              <select
-                className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
-                value={deliveryMode}
-                onChange={(e) => setDeliveryMode(e.target.value as 'diy' | 'dwy' | 'dfy')}
-              >
-                <option value="diy">DIY (do it yourself)</option>
-                <option value="dwy">DWY (done with you)</option>
-                <option value="dfy">DFY (done for you)</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label>Plan size (tier cap)</Label>
-              <select
-                className="h-11 w-full rounded-[0.6rem] border border-input bg-background px-3.5 text-sm"
-                value={planSize}
-                onChange={(e) => {
-                  const next = e.target.value as 'small' | 'standard' | 'full';
-                  setPlanSize(next);
-                  setUnlockedTier(1);
-                }}
-              >
-                <option value="small">Small (Tier 1 only)</option>
-                <option value="standard">Standard (up to Tier 2)</option>
-                <option value="full">Full (up to Tier 3)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {canRunLiveSnapshot ? (
-              <Button
-                type="button"
-                className="w-full sm:flex-1"
-                size="lg"
-                disabled={snapshotLoading}
-                onClick={() => void runLiveSnapshot()}
-              >
-                {snapshotLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Live scan
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant={canRunLiveSnapshot ? 'outline' : 'default'}
-              className="w-full sm:flex-1"
-              size="lg"
-              disabled={offlineBusy}
-              onClick={runAudit}
-            >
-              {offlineBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Quick estimate
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            <strong className="font-medium text-foreground">Quick estimate</strong> works everywhere—good for a fast read.{' '}
-            <strong className="font-medium text-foreground">Live scan</strong> uses a connected scanner for a closer match to
-            the full rubric (your team can enable it in hosting settings).
-          </p>
 
           <Collapsible open={technicalOpen} onOpenChange={setTechnicalOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-dashed border-border/80 bg-muted/10 px-4 py-2.5 text-left text-xs font-medium text-muted-foreground hover:bg-muted/25">
@@ -421,153 +530,6 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
                   Local direct URL is set (<code className="rounded bg-muted px-1 py-0.5">VITE_CLG_SNAPSHOT_URL</code>).
                 </p>
               )}
-            </CollapsibleContent>
-          </Collapsible>
-
-          <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
-            <Switch id="clg-manual-signals" checked={manualSignals} onCheckedChange={setManualSignals} />
-            <Label htmlFor="clg-manual-signals" className="cursor-pointer text-sm font-normal leading-snug">
-              I will enter my own scores and checklists (open “Refine homepage signals” below, then turn this on before
-              re-running)
-            </Label>
-          </div>
-
-          <Collapsible open={refineOpen} onOpenChange={setRefineOpen}>
-            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border/80 bg-muted/20 px-4 py-3 text-left text-sm font-medium text-foreground hover:bg-muted/40">
-              Refine homepage signals
-              <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', refineOpen && 'rotate-180')} />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-5 border-t border-border/60 pt-5 mt-2">
-              <p className="text-xs text-muted-foreground">
-                Optional: paste real homepage quotes or adjust scores after a human read. Turn on the switch above so the
-                next run keeps these fields instead of resetting the baseline.
-              </p>
-
-              <div className="space-y-3">
-                <Label>Clarity scoring (0-10 each)</Label>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={10}
-                    value={form.whatIsIt}
-                    onChange={(e) => setForm((prev) => ({ ...prev, whatIsIt: Number(e.target.value) || 0 }))}
-                    placeholder="What is it?"
-                  />
-                  <Input
-                    type="number"
-                    min={0}
-                    max={10}
-                    value={form.whoIsItFor}
-                    onChange={(e) => setForm((prev) => ({ ...prev, whoIsItFor: Number(e.target.value) || 0 }))}
-                    placeholder="Who is it for?"
-                  />
-                  <Input
-                    type="number"
-                    min={0}
-                    max={10}
-                    value={form.whyBetter}
-                    onChange={(e) => setForm((prev) => ({ ...prev, whyBetter: Number(e.target.value) || 0 }))}
-                    placeholder="Why better?"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Founder phrases ({phraseSummary})</Label>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {FOUNDER_PHRASES.map((phrase) => (
-                    <label key={phrase} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
-                      <Checkbox
-                        checked={form.founderPhrases.includes(phrase)}
-                        onCheckedChange={() =>
-                          setForm((prev) => ({ ...prev, founderPhrases: toggleListValue(prev.founderPhrases, phrase) }))
-                        }
-                      />
-                      <span className="text-xs text-muted-foreground">{phrase}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Essential sections present</Label>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {ESSENTIAL_SECTIONS.map((section) => (
-                    <label key={section.id} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
-                      <Checkbox
-                        checked={form.sectionsPresent.includes(section.id)}
-                        onCheckedChange={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            sectionsPresent: toggleListValue(prev.sectionsPresent, section.id),
-                          }))
-                        }
-                      />
-                      <span className="text-xs text-muted-foreground">{section.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Conversion signals</Label>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {[
-                    { key: 'ctaSpecific', label: 'Specific outcome CTA' },
-                    { key: 'socialProofCredible', label: 'Credible social proof' },
-                    { key: 'outcomesFocused', label: 'Outcome-led copy' },
-                    { key: 'customerLanguage', label: 'Customer language over buzzwords' },
-                  ].map((signal) => (
-                    <label key={signal.key} className="flex items-center gap-2 rounded-lg border border-border/80 p-2">
-                      <Checkbox
-                        checked={form.conversionSignals[signal.key as keyof CLGAuditInput['conversionSignals']]}
-                        onCheckedChange={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            conversionSignals: {
-                              ...prev.conversionSignals,
-                              [signal.key]:
-                                !prev.conversionSignals[signal.key as keyof CLGAuditInput['conversionSignals']],
-                            },
-                          }))
-                        }
-                      />
-                      <span className="text-xs text-muted-foreground">{signal.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Audit notes</Label>
-                <Textarea
-                  value={form.notes}
-                  onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Key quotes, missing anchors, strongest weakness..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Top quote evidence (optional, 3 snippets)</Label>
-                <div className="space-y-2">
-                  {[0, 1, 2].map((idx) => (
-                    <Input
-                      key={idx}
-                      value={form.quoteEvidence?.[idx] ?? ''}
-                      onChange={(e) =>
-                        setForm((prev) => {
-                          const next = [...(prev.quoteEvidence ?? ['', '', ''])];
-                          next[idx] = e.target.value;
-                          return { ...prev, quoteEvidence: next };
-                        })
-                      }
-                      placeholder={`Quote ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              </div>
             </CollapsibleContent>
           </Collapsible>
 
