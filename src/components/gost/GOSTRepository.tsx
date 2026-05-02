@@ -672,21 +672,6 @@ export function GOSTRepository({
         return false;
       }
 
-      if (f === 'orphans') {
-        return !item.outcomeSupported && 
-          item.status !== 'cut' && 
-          item.status !== 'promoted' &&
-          item.status !== 'completed';
-      }
-      if (f === 'needs-review') {
-        if (item.status === 'cut' || item.status === 'promoted' || item.status === 'completed') return false;
-        if (!item.outcomeSupported) return true;
-        if (!data.objectives.some(o => o.id === item.outcomeSupported)) return true;
-        const execWindow = getEffectiveExecutionWindow(item);
-        if (item.abilityToExecute === 'low' && execWindow === '90-day') return true;
-        return false;
-      }
-      
       if (f === 'quick-wins' || f === 'phase-2' || f === 'later') {
         if (item.status === 'cut' || item.status === 'promoted' || item.status === 'completed') return false;
         const bucket = derivePriorityBucket(item, activeObjectiveIds);
@@ -1022,11 +1007,7 @@ export function GOSTRepository({
           <p className="text-sm text-muted-foreground mb-4">
             {listFilter === 'fix-first'
               ? 'Nothing needs fixing right now — links and review rules look good.'
-              : listFilter === 'orphans'
-                ? 'All items have outcomes assigned.'
-                : listFilter === 'needs-review'
-                  ? 'All visible items are properly configured.'
-                  : 'Add ideas for future objectives, strategies, and tactics here.'}
+              : 'Add ideas for future objectives, strategies, and tactics here.'}
           </p>
         </div>
       )}

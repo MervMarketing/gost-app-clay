@@ -157,7 +157,7 @@ export interface CLGRecommendation {
 
 export interface CLGAuditResult {
   runAt: string;
-  /** `merv-snapshot` = live CLG Snapshot API (same rubric as positioning-scoring-rubric-v1). */
+  /** Live CLG rubric: `merv-snapshot` = external or inline engine (GOST `/api/clg-snapshot` with Anthropic). */
   source?: 'local-heuristic' | 'merv-snapshot';
   input: CLGAuditInput;
   score: {

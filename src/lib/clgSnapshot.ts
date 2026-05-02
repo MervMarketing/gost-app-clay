@@ -1,6 +1,7 @@
 /**
- * Client for the Merv CLG Snapshot API (`clg-snapshot` / snapshot.mervmarketing.com).
- * JSON shape matches `clg-snapshot/src/lib/types.ts` and `positioning-scoring-rubric-v1.md`.
+ * Client for the Merv CLG live scan: POST same-origin `/api/clg-snapshot` with `{ url }`.
+ * Production uses the built-in engine when `ANTHROPIC_API_KEY` is set on Vercel; otherwise may proxy to `CLG_SNAPSHOT_URL`.
+ * JSON shape matches `src/lib/mervSnapshotEngine` and `positioning-scoring-rubric-v1.md`.
  */
 
 import type { CLGAuditInput, CLGAuditResult } from '@/types/gost';
@@ -77,7 +78,7 @@ export function getSnapshotScanUrl(apiBaseUrl: string): string {
 
 /**
  * @param homepageUrl URL to scan
- * @param devDirectBase In local dev only: Snapshot base (VITE_CLG_SNAPSHOT_URL). In production, calls same-origin `/api/clg-snapshot` (needs CLG_SNAPSHOT_URL on Vercel).
+ * @param devDirectBase Local dev only: external Snapshot base (`VITE_CLG_SNAPSHOT_URL`). Otherwise POSTs to `/api/clg-snapshot` (needs `vercel dev` + `ANTHROPIC_API_KEY`, or Vercel prod env).
  */
 export async function fetchMervSnapshotScan(
   homepageUrl: string,

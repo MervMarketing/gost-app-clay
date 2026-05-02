@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { runMervHomepageScan, ScanHttpError } from '../src/lib/mervSnapshotEngine/runScan';
 
 function formatUpstreamError(err: unknown): string {
   if (!(err instanceof Error)) return String(err);
@@ -23,23 +24,30 @@ function formatUpstreamError(err: unknown): string {
 }
 
 /**
- * Same-origin proxy: browser → GOST /api/clg-snapshot → Snapshot /api/scan.
- * Avoids CORS. Set CLG_SNAPSHOT_URL on Vercel (server env, not VITE_*).
+ * CLG live homepage scan:
+ * 1. If `ANTHROPIC_API_KEY` is set — runs the built-in engine (same rubric as clg-snapshot).
+ * 2. Else if `CLG_SNAPSHOT_URL` is set — proxies to external Snapshot (legacy).
+ * 3. Else — 501 with setup instructions.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   res.setHeader('Content-Type', 'application/json');
 
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
+  const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
+  const upstream = process.env.CLG_SNAPSHOT_URL?.trim();
+
+  if (req.method === 'GET') {
+    res.status(200).json({
+      ok: true,
+      service: 'gost-clg-snapshot',
+      mode: anthropicKey ? 'inline' : upstream ? 'proxy' : 'unconfigured',
+      anthropicConfigured: Boolean(anthropicKey),
+      proxyConfigured: Boolean(upstream),
+    });
     return;
   }
 
-  const upstream = process.env.CLG_SNAPSHOT_URL?.trim();
-  if (!upstream) {
-    res.status(501).json({
-      error:
-        'CLG_SNAPSHOT_URL is not set on the server. In Vercel → Settings → Environment Variables, add CLG_SNAPSHOT_URL=https://your-snapshot-host (no /api/scan).',
-    });
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
     return;
   }
 
@@ -48,6 +56,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body as { url?: string });
   } catch {
     res.status(400).json({ error: 'Invalid JSON body' });
+    return;
+  }
+
+  // --- Built-in engine (preferred) ---
+  if (anthropicKey) {
+    try {
+      const scan = await runMervHomepageScan(body.url || '', anthropicKey);
+      res.status(200).json(scan);
+    } catch (e) {
+      if (e instanceof ScanHttpError) {
+        res.status(e.status).json({
+          error: e.message,
+          ...(e.detail ? { detail: e.detail } : {}),
+        });
+        return;
+      }
+      const detail = e instanceof Error ? e.message : 'Unknown error';
+      res.status(500).json({
+        error: 'Live scan failed unexpectedly.',
+        detail,
+      });
+    }
+    return;
+  }
+
+  // --- Legacy proxy ---
+  if (!upstream) {
+    res.status(501).json({
+      error: 'Live scan is not configured.',
+      hint:
+        'Set ANTHROPIC_API_KEY on this Vercel project to run the built-in CLG scanner, or set CLG_SNAPSHOT_URL to proxy an external Snapshot service. Redeploy after changing environment variables.',
+    });
     return;
   }
 
@@ -91,7 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       error: 'GOST could not connect to your Snapshot server.',
       detail: `${chain} · host: ${host} · path: /api/scan`,
       hint:
-        'Use Quick estimate in GOST if you need a score without the live scanner. For Live scan: confirm the Snapshot app is deployed and healthy, POST /api/scan works (e.g. curl), TLS/DNS resolve from the public internet, and CLG_SNAPSHOT_URL on this Vercel project is the correct origin (no trailing /api/scan). Redeploy GOST after env changes.',
+        'Prefer ANTHROPIC_API_KEY on this project for a self-contained scan. Otherwise confirm the external Snapshot is up and CLG_SNAPSHOT_URL is correct.',
     });
   }
 }

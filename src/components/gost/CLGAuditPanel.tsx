@@ -48,7 +48,7 @@ interface CLGAuditPanelProps {
   onCreateRecommendations: (recommendations: CLGRecommendation[]) => void;
 }
 
-/** Dev-only: direct browser → Snapshot (needs CORS on Snapshot). Prod uses `/api/clg-snapshot` + CLG_SNAPSHOT_URL on Vercel. */
+/** Dev: direct browser → external Snapshot if `VITE_CLG_SNAPSHOT_URL` set; else use `vercel dev` for `/api/clg-snapshot` + `ANTHROPIC_API_KEY`. */
 const snapshotDevDirectBase = import.meta.env.VITE_CLG_SNAPSHOT_URL?.trim() || '';
 const canRunLiveSnapshot = import.meta.env.PROD || Boolean(snapshotDevDirectBase);
 
@@ -154,7 +154,7 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   const runLiveSnapshot = async () => {
     if (import.meta.env.DEV && !snapshotDevDirectBase) {
       toast.error(
-        'Local dev: set VITE_CLG_SNAPSHOT_URL, or run `vercel dev` so /api/clg-snapshot exists. Production: set CLG_SNAPSHOT_URL on Vercel.',
+        'Local dev: run `vercel dev` with ANTHROPIC_API_KEY for Live scan, or set VITE_CLG_SNAPSHOT_URL to call an external scanner. Production: set ANTHROPIC_API_KEY on Vercel (preferred).',
       );
       return;
     }
@@ -401,15 +401,20 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
             <CollapsibleContent className="space-y-2 border-l-2 border-muted pl-3 pt-3 text-xs text-muted-foreground">
               {import.meta.env.PROD ? (
                 <p>
-                  Production: set server env <code className="rounded bg-muted px-1 py-0.5">CLG_SNAPSHOT_URL</code> on Vercel
-                  to your Snapshot service origin (example: <code className="rounded bg-muted px-1 py-0.5">https://snapshot.example.com</code>
-                  — no <code className="rounded bg-muted px-1 py-0.5">/api/scan</code> suffix). Redeploy GOST after changing it.
+                  <strong className="text-foreground">Preferred:</strong> server env{' '}
+                  <code className="rounded bg-muted px-1 py-0.5">ANTHROPIC_API_KEY</code> on this Vercel project (built-in CLG
+                  engine at <code className="rounded bg-muted px-1 py-0.5">/api/clg-snapshot</code>).{' '}
+                  <strong className="text-foreground">Optional fallback:</strong>{' '}
+                  <code className="rounded bg-muted px-1 py-0.5">CLG_SNAPSHOT_URL</code> to proxy an external Snapshot (origin
+                  only, no <code className="rounded bg-muted px-1 py-0.5">/api/scan</code>). Redeploy after env changes.
                 </p>
               ) : !snapshotDevDirectBase ? (
                 <p>
-                  Local: set <code className="rounded bg-muted px-1 py-0.5">VITE_CLG_SNAPSHOT_URL</code> for a direct browser
-                  scan (Snapshot must allow CORS), or run <code className="rounded bg-muted px-1 py-0.5">vercel dev</code> so{' '}
-                  <code className="rounded bg-muted px-1 py-0.5">/api/clg-snapshot</code> proxies like production.
+                  Local: run <code className="rounded bg-muted px-1 py-0.5">vercel dev</code> with{' '}
+                  <code className="rounded bg-muted px-1 py-0.5">ANTHROPIC_API_KEY</code> in{' '}
+                  <code className="rounded bg-muted px-1 py-0.5">.env.local</code> for the built-in scan; or set{' '}
+                  <code className="rounded bg-muted px-1 py-0.5">VITE_CLG_SNAPSHOT_URL</code> for a direct browser call (CORS
+                  required on that host).
                 </p>
               ) : (
                 <p>
