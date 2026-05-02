@@ -88,7 +88,9 @@ export default function Projects() {
   const [deletingProject, setDeletingProject] = useState<GostProject | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [useFotofetchTemplate, setUseFotofetchTemplate] = useState(false);
+  const [useReverseFunnelTemplate, setUseReverseFunnelTemplate] = useState(false);
   const fotofetchBootstrapRef = useRef(false);
+  const reverseFunnelBootstrapRef = useRef(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -107,6 +109,25 @@ export default function Projects() {
     setUseFotofetchTemplate(true);
     setProjectName('Fotofetch');
     setProjectDesc('Growth plan + CLG tiered example');
+    setSelectedWorkspaceId(workspaces[0].id);
+    setNewProjectOpen(true);
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('template');
+    setSearchParams(next, { replace: true });
+  }, [loading, workspaces, searchParams, setSearchParams]);
+
+  // Open "Create project" empty but defaulting to Reverse funnel tab (?template=reverse-funnel).
+  useEffect(() => {
+    if (loading || reverseFunnelBootstrapRef.current) return;
+    if (searchParams.get('template') !== 'reverse-funnel') return;
+    if (workspaces.length === 0) return;
+
+    reverseFunnelBootstrapRef.current = true;
+    setUseFotofetchTemplate(false);
+    setUseReverseFunnelTemplate(true);
+    setProjectName('Reverse funnel plan');
+    setProjectDesc('Opens on the Reverse funnel tab first');
     setSelectedWorkspaceId(workspaces[0].id);
     setNewProjectOpen(true);
 
@@ -144,9 +165,20 @@ export default function Projects() {
     if (!projectName.trim() || !selectedWorkspaceId) return;
     
     setSubmitting(true);
-    const initialData: GOSTData | undefined = useFotofetchTemplate
-      ? JSON.parse(JSON.stringify(fotofetchPreset)) as GOSTData
-      : undefined;
+    let initialData: GOSTData | undefined;
+    if (useFotofetchTemplate) {
+      initialData = JSON.parse(JSON.stringify(fotofetchPreset)) as GOSTData;
+    } else if (useReverseFunnelTemplate) {
+      initialData = {
+        executionGoal: { text: '' },
+        objectives: [],
+        strategies: [],
+        tactics: [],
+        timeframe: '90-day',
+        repository: [],
+        initialMainTab: 'reverse-funnel',
+      };
+    }
     const { data, error } = await createProject(
       selectedWorkspaceId,
       projectName.trim(),
@@ -166,8 +198,15 @@ export default function Projects() {
         toast.error(msg);
       }
     } else if (data) {
-      toast.success(useFotofetchTemplate ? 'Fotofetch project saved — opening…' : 'Project created');
+      if (useFotofetchTemplate) {
+        toast.success('Fotofetch project saved — opening…');
+      } else if (useReverseFunnelTemplate) {
+        toast.success('Project created — opening Reverse funnel');
+      } else {
+        toast.success('Project created');
+      }
       setUseFotofetchTemplate(false);
+      setUseReverseFunnelTemplate(false);
       navigate(`/project/${data.id}`);
     }
   };
@@ -540,7 +579,10 @@ export default function Projects() {
         open={newProjectOpen}
         onOpenChange={(open) => {
           setNewProjectOpen(open);
-          if (!open) setUseFotofetchTemplate(false);
+          if (!open) {
+            setUseFotofetchTemplate(false);
+            setUseReverseFunnelTemplate(false);
+          }
         }}
       >
         <DialogContent>
@@ -573,13 +615,36 @@ export default function Projects() {
               <Checkbox
                 id="fotofetch-template"
                 checked={useFotofetchTemplate}
-                onCheckedChange={(v) => setUseFotofetchTemplate(v === true)}
+                onCheckedChange={(v) => {
+                  const on = v === true;
+                  setUseFotofetchTemplate(on);
+                  if (on) setUseReverseFunnelTemplate(false);
+                }}
                 className="mt-0.5"
               />
               <span className="text-sm leading-snug">
                 <span className="font-medium text-foreground">Load Fotofetch example plan</span>
                 <span className="block text-muted-foreground">
                   Includes goal, objectives, strategies, tactics, repository samples, and CLG audit—same as the homepage demo.
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/80 bg-muted/20 px-3 py-3">
+              <Checkbox
+                id="reverse-funnel-first-tab"
+                checked={useReverseFunnelTemplate}
+                onCheckedChange={(v) => {
+                  const on = v === true;
+                  setUseReverseFunnelTemplate(on);
+                  if (on) setUseFotofetchTemplate(false);
+                }}
+                className="mt-0.5"
+              />
+              <span className="text-sm leading-snug">
+                <span className="font-medium text-foreground">Open on Reverse funnel first</span>
+                <span className="block text-muted-foreground">
+                  Empty plan; first tab is visitor math instead of homepage check—good for pivots or when the live site is not
+                  the focus.
                 </span>
               </span>
             </label>

@@ -95,7 +95,9 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
         (initialData?.strategies?.length ?? 0) > 0 ||
         (initialData?.tactics?.length ?? 0) > 0,
     );
-    return hasPyramidContent ? 'builder' : 'audit';
+    if (hasPyramidContent) return 'builder';
+    if (initialData?.initialMainTab === 'reverse-funnel') return 'reverse-funnel';
+    return 'audit';
   });
   const [clientFeedbackMap, setClientFeedbackMap] = useState<Record<string, { priority: ClientPriority; note?: string }>>({});
   
@@ -234,8 +236,14 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
       localStorage.setItem(`gost-project-guided-${projectId}`, '1');
     }
     setShowProjectOnboarding(false);
-    setActiveTab(hasExistingPlan ? 'builder' : 'audit');
-  }, [projectId, hasExistingPlan]);
+    setActiveTab(
+      hasExistingPlan
+        ? 'builder'
+        : initialData?.initialMainTab === 'reverse-funnel'
+          ? 'reverse-funnel'
+          : 'audit',
+    );
+  }, [projectId, hasExistingPlan, initialData?.initialMainTab]);
 
   // Handler for import button click - shows confirmation if plan exists
   const handleImportClick = () => {

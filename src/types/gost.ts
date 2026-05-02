@@ -181,6 +181,9 @@ export interface CLGAuditResult {
   };
 }
 
+/** First tab to open in GOSTBuilder when the plan is still empty (no goal/objectives/strategies/tactics). */
+export type GOSTInitialMainTab = 'audit' | 'reverse-funnel';
+
 export interface GOSTData {
   executionGoal: ExecutionGoal;
   objectives: Objective[];
@@ -191,6 +194,8 @@ export interface GOSTData {
   // Plan-level settings
   pulseFrequency?: PulseFrequency; // Default: 'standard'
   clgAudit?: CLGAuditResult;
+  /** Optional entry preference for empty plans (e.g. `?template=reverse-funnel`). Ignored once the plan has pyramid content. */
+  initialMainTab?: GOSTInitialMainTab;
   [key: string]: unknown; // Allow JSON serialization
 }
 

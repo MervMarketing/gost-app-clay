@@ -86,6 +86,19 @@ export default function ReverseFunnelPage() {
       </header>
 
       <main className="container max-w-6xl mx-auto flex-1 px-4 py-8 md:px-8">
+        {isAuthenticated ? (
+          <p className="mb-6 text-sm text-muted-foreground">
+            Need a workspace project that opens on this tool first? From{' '}
+            <button
+              type="button"
+              className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
+              onClick={() => navigate('/projects?template=reverse-funnel')}
+            >
+              Projects
+            </button>
+            , create with “Open on Reverse funnel first” (or use that link).
+          </p>
+        ) : null}
         <ReverseFunnelTool onBuildNewProject={handleBuild} buildBusy={buildBusy} />
       </main>
     </div>
