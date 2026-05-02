@@ -32,7 +32,7 @@ const demoTourSteps: TourStep[] = [
     icon: Sparkles,
     title: 'Welcome',
     description:
-      'You get a simple homepage score and a short fix list—so your team stops debating and starts shipping. Most people finish the first check in under two minutes.',
+      'You get a simple homepage score and a short fix list—or skip that and use Reverse funnel for visitor math from your revenue goal. Most people finish one path in under two minutes.',
   },
   {
     id: 'clg-audit',
@@ -68,8 +68,8 @@ function getProjectTourSteps(projectName: string, hasPlanContent: boolean): Tour
       icon: Sparkles,
       title: `You're in — ${name}`,
       description: hasPlanContent
-        ? 'This project already has a plan. Add a quick homepage check to sharpen your story—then keep Active Plan and All Tactics in sync with what you are really doing.'
-        : 'You are three tabs away from a clear score, a tidy idea list, and a plan your team can follow. Small steps now save long meetings later.',
+        ? 'This project already has a plan. Add a quick homepage check if it helps—or use Reverse funnel for revenue math without touching your site. Then keep Active Plan and All Tactics honest.'
+        : 'Homepage check is optional. Reverse funnel answers how many visitors you need from your goals and rates—useful even when your current site is not the focus. Then you shape Active Plan and park ideas in All Tactics.',
     },
     {
       id: 'clg-audit',

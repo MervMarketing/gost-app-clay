@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Projects from "./pages/Projects";
 import ProjectEditor from "./pages/ProjectEditor";
+import ReverseFunnelPage from "./pages/tools/ReverseFunnelPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/project/:id" element={<ProjectEditor />} />
+          <Route path="/tools/reverse-funnel" element={<ReverseFunnelPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

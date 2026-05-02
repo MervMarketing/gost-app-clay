@@ -185,6 +185,26 @@ export function useGOSTData(options: UseGOSTDataOptions = {}) {
     }));
   }, []);
 
+  /** Replace execution goal and all objectives from reverse-funnel math; clears objective links on strategies/tactics. */
+  const applyReverseFunnelSeed = useCallback((executionGoal: ExecutionGoal, objectives: Objective[]) => {
+    setData(prev => ({
+      ...prev,
+      executionGoal,
+      objectives: objectives.slice(0, 5),
+      strategies: prev.strategies.map(str => ({
+        ...str,
+        objectiveId: null,
+        primaryObjectiveId: null,
+        secondaryObjectiveIds: [],
+      })),
+      tactics: prev.tactics.map(tac => ({
+        ...tac,
+        primaryObjectiveId: null,
+        secondaryObjectiveIds: [],
+      })),
+    }));
+  }, []);
+
   // Strategy operations
   const updateStrategy = useCallback((id: string, updates: Partial<Strategy>) => {
     setData(prev => ({
@@ -921,6 +941,7 @@ export function useGOSTData(options: UseGOSTDataOptions = {}) {
     addObjective,
     bulkAddObjectives,
     removeObjective,
+    applyReverseFunnelSeed,
     updateStrategy,
     addStrategy,
     bulkAddStrategies,

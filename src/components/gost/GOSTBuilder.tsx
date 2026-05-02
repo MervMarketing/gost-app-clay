@@ -38,9 +38,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { RotateCcw, Maximize2, Upload, MoreVertical, Archive, Eye, FileX, ArrowLeft, Rocket, LayoutDashboard, PlayCircle, ClipboardCheck } from 'lucide-react';
+import { RotateCcw, Maximize2, Upload, MoreVertical, Archive, Eye, FileX, ArrowLeft, Rocket, LayoutDashboard, PlayCircle, ClipboardCheck, Calculator } from 'lucide-react';
 import { RepositoryDashboard } from './RepositoryDashboard';
 import { CLGAuditPanel } from './CLGAuditPanel';
+import { ReverseFunnelTool } from '@/components/tools/ReverseFunnelTool';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { parseGOSTFromText } from '@/lib/gostSerializer';
@@ -53,6 +54,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+
+type BuilderMainTab = 'audit' | 'reverse-funnel' | 'builder' | 'repository';
 
 interface GOSTBuilderProps {
   projectId?: string;
@@ -84,7 +87,7 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
   const [showQuickImport, setShowQuickImport] = useState(false);
   const [activeLayer, setActiveLayer] = useState<PyramidLayer>('goal');
   const [confirmedStages, setConfirmedStages] = useState<Set<PyramidLayer>>(new Set());
-  const [activeTab, setActiveTab] = useState<'builder' | 'repository' | 'audit'>(() => {
+  const [activeTab, setActiveTab] = useState<BuilderMainTab>(() => {
     if (isViewOnlyProp) return 'builder';
     const hasPyramidContent = Boolean(
       initialData?.executionGoal?.text?.trim() ||
@@ -143,6 +146,7 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
     addObjective,
     bulkAddObjectives,
     removeObjective,
+    applyReverseFunnelSeed,
     updateStrategy,
     addStrategy,
     bulkAddStrategies,
@@ -694,7 +698,7 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
         )}
 
         {/* Tabs for Builder vs Repository */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'builder' | 'repository' | 'audit')} className="mb-4 sm:mb-6">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as BuilderMainTab)} className="mb-4 sm:mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <TabsList className="w-full sm:w-auto">
               {showAuditTab && (
@@ -702,6 +706,16 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
                   <ClipboardCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   <span className="sm:hidden">Check</span>
                   <span className="hidden sm:inline">Homepage check</span>
+                </TabsTrigger>
+              )}
+              {showAuditTab && (
+                <TabsTrigger
+                  value="reverse-funnel"
+                  className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-xs sm:text-sm"
+                >
+                  <Calculator className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="sm:hidden">Funnel</span>
+                  <span className="hidden sm:inline">Reverse funnel</span>
                 </TabsTrigger>
               )}
               <TabsTrigger value="builder" className="gap-1.5 sm:gap-2 flex-1 sm:flex-none text-xs sm:text-sm">
@@ -949,6 +963,22 @@ export function GOSTBuilder({ projectId, projectName, initialData, isViewOnly: i
                   });
                   toast.success(`Added ${recommendations.length} recommendations to repository`);
                   setActiveTab('repository');
+                }}
+              />
+            </TabsContent>
+          )}
+          {showAuditTab && (
+            <TabsContent value="reverse-funnel" className="mt-6">
+              <ReverseFunnelTool
+                embedded
+                confirmBeforeApply={Boolean(
+                  data.executionGoal?.text?.trim() || (data.objectives?.length ?? 0) > 0,
+                )}
+                onApplyToPlan={(goal, objectives) => {
+                  applyReverseFunnelSeed(goal, objectives);
+                  toast.success('Goal and objectives updated from reverse funnel');
+                  setActiveTab('builder');
+                  setActiveLayer('objectives');
                 }}
               />
             </TabsContent>
