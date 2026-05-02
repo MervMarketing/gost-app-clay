@@ -81,22 +81,30 @@ export function useProjects() {
   }, [isAuthenticated, fetchWorkspaces, fetchProjects]);
 
   const createWorkspace = async (name: string, description?: string) => {
-    if (!user) return { error: new Error('Not authenticated') };
-    
+    // Use getUser() so we don't rely on React auth state, which can lag right after OAuth redirect.
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const authUser = authData?.user;
+    if (authErr || !authUser) {
+      return {
+        data: null,
+        error: authErr ?? new Error('Not signed in. Refresh the page or sign in again.'),
+      };
+    }
+
     const { data, error } = await supabase
       .from('workspaces')
       .insert({
-        owner_id: user.id,
+        owner_id: authUser.id,
         name,
-        description: description || null
+        description: description || null,
       })
       .select()
       .single();
-    
+
     if (!error && data) {
-      setWorkspaces(prev => [...prev, data]);
+      setWorkspaces((prev) => [...prev, data]);
     }
-    
+
     return { data, error };
   };
 
@@ -130,16 +138,23 @@ export function useProjects() {
   };
 
   const createProject = async (workspaceId: string, name: string, description?: string, initialData?: GOSTData) => {
-    if (!user) return { error: new Error('Not authenticated') };
-    
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const authUser = authData?.user;
+    if (authErr || !authUser) {
+      return {
+        data: null,
+        error: authErr ?? new Error('Not signed in. Refresh the page or sign in again.'),
+      };
+    }
+
     const { data, error } = await supabase
       .from('gost_projects')
       .insert({
         workspace_id: workspaceId,
-        owner_id: user.id,
+        owner_id: authUser.id,
         name,
         description: description || null,
-        data: initialData || {}
+        data: initialData || {},
       })
       .select()
       .single();

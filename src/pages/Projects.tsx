@@ -122,7 +122,7 @@ export default function Projects() {
     setSubmitting(false);
     
     if (error) {
-      toast.error('Failed to create workspace');
+      toast.error(error.message || 'Failed to create workspace');
     } else {
       toast.success('Workspace created');
       setNewWorkspaceOpen(false);
@@ -147,7 +147,7 @@ export default function Projects() {
     setSubmitting(false);
     
     if (error) {
-      toast.error('Failed to create project');
+      toast.error(error.message || 'Failed to create project');
     } else if (data) {
       toast.success(useFotofetchTemplate ? 'Fotofetch project saved — opening…' : 'Project created');
       setUseFotofetchTemplate(false);
