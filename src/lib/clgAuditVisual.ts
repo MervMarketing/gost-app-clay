@@ -16,6 +16,48 @@ export function homepagePreviewImageUrl(homepageUrl: string): string | null {
   }
 }
 
+/** Canonical homepage sections for the illustrative audit map (matches CLG structure checklist). */
+export const ILLUSTRATIVE_SECTIONS = [
+  { id: 'hero', label: 'Hero', description: 'Headline, subhead, primary CTA' },
+  { id: 'differentiation', label: 'Differentiation', description: 'Why you vs. alternatives' },
+  { id: 'demo', label: 'Demo / proof', description: 'Product story, screenshots, how it works' },
+  { id: 'trust', label: 'Trust / proof', description: 'Logos, quotes, metrics' },
+  { id: 'doors', label: 'Offer paths', description: 'Clear next steps for each visitor type' },
+  { id: 'resources', label: 'Resources', description: 'Content, docs, social proof depth' },
+  { id: 'closingCta', label: 'Closing CTA', description: 'Final conversion push' },
+] as const;
+
+export type IllustrativeSectionId = (typeof ILLUSTRATIVE_SECTIONS)[number]['id'];
+
+const C_STRUCTURE_IDS: IllustrativeSectionId[] = ['demo', 'trust', 'doors'];
+
+/** Place each issue on a section using rubric dimension when possible. */
+export function bucketIssuesBySection(issues: CLGAuditIssue[]): Record<IllustrativeSectionId, CLGAuditIssue[]> {
+  const buckets = Object.fromEntries(
+    ILLUSTRATIVE_SECTIONS.map((s) => [s.id, [] as CLGAuditIssue[]]),
+  ) as Record<IllustrativeSectionId, CLGAuditIssue[]>;
+  let cRot = 0;
+  let rr = 0;
+  const allIds = ILLUSTRATIVE_SECTIONS.map((s) => s.id);
+
+  for (const issue of issues) {
+    const d = dimensionFromIssue(issue);
+    let target: IllustrativeSectionId;
+    if (d === 'A') target = 'hero';
+    else if (d === 'B') target = 'differentiation';
+    else if (d === 'C') {
+      target = C_STRUCTURE_IDS[cRot % C_STRUCTURE_IDS.length];
+      cRot++;
+    } else if (d === 'D') target = 'closingCta';
+    else {
+      target = allIds[rr % allIds.length];
+      rr++;
+    }
+    buckets[target].push(issue);
+  }
+  return buckets;
+}
+
 export type RubricDimension = 'A' | 'B' | 'C' | 'D';
 
 export const RUBRIC_DIMENSION_UI: Record<

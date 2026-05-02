@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { CLGAuditResult, CLGRecommendation } from '@/types/gost';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,13 +8,12 @@ import {
   RUBRIC_DIMENSION_UI,
   buildCriteriaRailItems,
   dimensionFromIssue,
-  homepagePreviewImageUrl,
   partitionRecommendationsForRail,
-  stickySlot,
   truncateNote,
   type RubricDimension,
 } from '@/lib/clgAuditVisual';
-import { ExternalLink, ImageOff } from 'lucide-react';
+import { CLGAuditIllustrativePage } from '@/components/gost/CLGAuditIllustrativePage';
+import { ExternalLink } from 'lucide-react';
 
 const SECTION_LABELS: Record<string, string> = {
   hero: 'Hero',
@@ -48,80 +47,12 @@ function DotGrid({ className }: { className?: string }) {
   );
 }
 
-function StickyNote({
-  text,
-  top,
-  left,
-  rotate,
-  accent,
-}: {
-  text: string;
-  top: number;
-  left: number;
-  rotate: number;
-  accent: 'amber' | 'rose' | 'violet';
-}) {
-  const border =
-    accent === 'rose'
-      ? 'border-rose-300/80 dark:border-rose-600/50'
-      : accent === 'violet'
-        ? 'border-violet-300/80 dark:border-violet-600/50'
-        : 'border-amber-300/80 dark:border-amber-600/50';
-  const bg =
-    accent === 'rose'
-      ? 'bg-rose-50/95 dark:bg-rose-950/40'
-      : accent === 'violet'
-        ? 'bg-violet-50/95 dark:bg-violet-950/40'
-        : 'bg-[#fff8dc]/95 dark:bg-amber-950/30';
-  const pointer =
-    accent === 'rose'
-      ? 'border-r-rose-400/90 dark:border-r-rose-500'
-      : accent === 'violet'
-        ? 'border-r-violet-400/90 dark:border-r-violet-500'
-        : 'border-r-amber-500/90 dark:border-r-amber-600';
-
-  return (
-    <div
-      className="pointer-events-none absolute z-20 max-w-[200px] sm:max-w-[220px]"
-      style={{ top: `${top}%`, left: `${left}%`, transform: `rotate(${rotate}deg)` }}
-    >
-      <div
-        className={cn(
-          'relative rounded-sm border-2 px-2.5 py-2 text-left shadow-md',
-          border,
-          bg,
-        )}
-      >
-        <div
-          className={cn(
-            'absolute -left-1 top-3 h-0 w-0 border-y-6 border-y-transparent border-r-8',
-            pointer,
-          )}
-          aria-hidden
-        />
-        <p className="font-display text-[11px] font-medium leading-snug text-foreground">{text}</p>
-      </div>
-    </div>
-  );
-}
-
 export function CLGAuditVisualBoard({
   result,
   homepageUrl,
   visibleRecommendations,
   className,
 }: CLGAuditVisualBoardProps) {
-  const [imgFailed, setImgFailed] = useState(false);
-  const previewSrc = useMemo(() => {
-    const fromScan = result?.snapshotMeta?.previewImageUrl?.trim();
-    if (fromScan) return fromScan;
-    return homepagePreviewImageUrl(homepageUrl);
-  }, [result?.snapshotMeta?.previewImageUrl, homepageUrl]);
-
-  useEffect(() => {
-    setImgFailed(false);
-  }, [previewSrc]);
-
   const criteriaItems = useMemo(() => {
     if (result) return buildCriteriaRailItems(result);
     return (['A', 'B', 'C', 'D'] as RubricDimension[]).map((dimension) => ({
@@ -171,7 +102,7 @@ export function CLGAuditVisualBoard({
               <p className="mt-1 max-w-md text-sm font-medium text-foreground">{publicBandLabel(result.band)}</p>
             ) : (
               <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                Run Quick estimate or Live scan to tag wording, positioning, and rubric dimensions on your preview.
+                Run Quick estimate or Live scan to map issues onto a labeled homepage wireframe.
               </p>
             )}
           </div>
@@ -227,40 +158,11 @@ export function CLGAuditVisualBoard({
           ) : null}
         </aside>
 
-        {/* Center — screenshot canvas */}
+        {/* Center — illustrative section map */}
         <div className="relative min-h-[280px] flex-1 bg-muted/15">
           <DotGrid />
           <div className="relative mx-auto max-h-[min(72vh,900px)] overflow-y-auto">
-            {!previewSrc || imgFailed ? (
-              <div className="flex min-h-[280px] flex-col items-center justify-center gap-3 p-8 text-center">
-                <ImageOff className="h-10 w-10 text-muted-foreground" />
-                <p className="max-w-sm text-sm text-muted-foreground">
-                  Add a full URL. <span className="font-medium text-foreground">Live scan</span> uses og/twitter images from
-                  the page when available (most reliable). Quick estimate uses a third-party full-page render that can be
-                  blocked—use <span className="font-medium text-foreground">Open site</span> as a fallback.
-                </p>
-              </div>
-            ) : (
-              <div className="relative w-full">
-                <img
-                  src={previewSrc}
-                  alt=""
-                  className="relative z-0 w-full object-top"
-                  loading="lazy"
-                  onError={() => setImgFailed(true)}
-                />
-                {result && result.topIssues.length > 0
-                  ? result.topIssues.map((issue, i) => {
-                      const dim = dimensionFromIssue(issue);
-                      const accent: 'amber' | 'rose' | 'violet' =
-                        dim === 'A' ? 'violet' : dim === 'D' ? 'rose' : 'amber';
-                      const { top, left, rotate } = stickySlot(seed, i);
-                      const text = truncateNote(issue.diagnosis || issue.quote, 100);
-                      return <StickyNote key={`${issue.quote}-${i}`} text={text} top={top} left={left} rotate={rotate} accent={accent} />;
-                    })
-                  : null}
-              </div>
-            )}
+            <CLGAuditIllustrativePage result={result} seed={seed} />
           </div>
         </div>
 
