@@ -1,5 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+function formatUpstreamError(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const parts: string[] = [err.message];
+  let c: unknown = err.cause;
+  for (let depth = 0; c != null && depth < 5; depth++) {
+    if (c instanceof Error) {
+      parts.push(c.message);
+      c = c.cause;
+    } else if (typeof c === 'object' && c !== null) {
+      const o = c as Record<string, unknown>;
+      if (o.code != null) parts.push(`code ${o.code}`);
+      if (o.errno != null) parts.push(`errno ${o.errno}`);
+      if (o.syscall != null) parts.push(String(o.syscall));
+      break;
+    } else {
+      parts.push(String(c));
+      break;
+    }
+  }
+  return parts.filter(Boolean).join(' · ');
+}
+
 /**
  * Same-origin proxy: browser → GOST /api/clg-snapshot → Snapshot /api/scan.
  * Avoids CORS. Set CLG_SNAPSHOT_URL on Vercel (server env, not VITE_*).
@@ -47,8 +69,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   try {
     const r = await fetch(scanUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'User-Agent': 'GOST-clg-snapshot-proxy/1.0',
+      },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(110_000),
     });
     const text = await r.text();
     let data: unknown;
@@ -59,11 +86,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
     res.status(r.status).json(data);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Unknown error';
+    const chain = formatUpstreamError(e);
     res.status(502).json({
       error: 'GOST could not connect to your Snapshot server.',
-      detail: `${msg} · host: ${host} · path: /api/scan`,
-      hint: 'Open that Snapshot URL in a browser, deploy clg-snapshot on Vercel, and set ANTHROPIC_API_KEY there. Redeploy GOST after changing CLG_SNAPSHOT_URL.',
+      detail: `${chain} · host: ${host} · path: /api/scan`,
+      hint:
+        'Use Quick estimate in GOST if you need a score without the live scanner. For Live scan: confirm the Snapshot app is deployed and healthy, POST /api/scan works (e.g. curl), TLS/DNS resolve from the public internet, and CLG_SNAPSHOT_URL on this Vercel project is the correct origin (no trailing /api/scan). Redeploy GOST after env changes.',
     });
   }
 }

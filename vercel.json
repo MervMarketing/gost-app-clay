@@ -4,5 +4,10 @@
       "source": "/((?!api/).*)",
       "destination": "/"
     }
-  ]
+  ],
+  "functions": {
+    "api/clg-snapshot.ts": {
+      "maxDuration": 120
+    }
+  }
 }
