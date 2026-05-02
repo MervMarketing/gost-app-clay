@@ -102,7 +102,9 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
   const runAudit = () => {
     const url = form.homepageUrl.trim();
     if (!url) {
-      toast.error('Add a homepage URL to run the audit.');
+      toast.error('Add a homepage URL first (the “Homepage URL” field above), then run offline baseline.', {
+        duration: 5000,
+      });
       return;
     }
 
@@ -323,7 +325,6 @@ export function CLGAuditPanel({ data, onSaveAudit, onCreateRecommendations }: CL
               variant={canRunLiveSnapshot ? 'outline' : 'default'}
               className="w-full sm:flex-1"
               size="lg"
-              disabled={snapshotLoading}
               onClick={runAudit}
             >
               Run offline baseline
